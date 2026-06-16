@@ -1,4 +1,5 @@
 import 'server-only'
 import Stripe from 'stripe'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const stripeKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder_for_build'
+export const stripe = new Stripe(stripeKey)

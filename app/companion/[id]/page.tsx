@@ -56,12 +56,17 @@ export default function CompanionDetailPage() {
       router.push('/')
       return
     }
-    const c = data as Companion
+    const c: Companion = {
+      ...data,
+      personality_id: null,
+      prebuilt_id: null,
+      companion_skills: [],
+    }
     setCompanion(c)
     setLevel(c.level)
     setXp(c.xp)
     setMsgCount(c.message_count)
-    setInstalledSkills(c.companion_skills ?? [])
+    setInstalledSkills([])
 
     const msgs = await getMessages(id)
     if (msgs.length > 0) {

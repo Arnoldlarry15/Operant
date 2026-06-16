@@ -70,7 +70,7 @@ export async function startCheckoutSession(items: CheckoutCartItem[]): Promise<s
   })
 
   const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded',
+    ui_mode: 'embedded' as any,
     redirect_on_completion: 'never',
     mode: 'payment',
     line_items,

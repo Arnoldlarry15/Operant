@@ -24,6 +24,7 @@ export interface CompanionRow {
   level: number
   xp: number
   skills: string[]
+  message_count: number
   created_at: string
   updated_at: string
 }

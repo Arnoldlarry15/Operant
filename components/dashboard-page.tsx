@@ -7,6 +7,7 @@ import { useAuth } from '@/components/auth-provider'
 import {
   createFreeCompanion, getMessages, saveMessage,
   updateCompanionXP, completeMilestone as saveMilestone, getMilestones, getCompanions, getOrders,
+  getPendingSkills, assignPendingSkill,
 } from '@/lib/actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import Image from 'next/image'
 import Link from 'next/link'
 import { DeployModal } from '@/components/deploy-modal'
+import { AssignSkillModal } from '@/components/assign-skill-modal'
 type Message = { role: 'user' | 'ai'; text: string; id?: string }
 
 const MILESTONES = [
@@ -57,6 +59,11 @@ export function DashboardPage() {
   // Deploy modal
   const [deployTarget, setDeployTarget] = useState<PurchasedCompanion | null>(null)
 
+  // Pending skill assignment
+  type PendingSkill = { id: string; skill_id: string; skill_name: string; created_at: string }
+  const [pendingSkills, setPendingSkills] = useState<PendingSkill[]>([])
+  const [showAssignModal, setShowAssignModal] = useState(false)
+
   // Once user is confirmed, ensure freeAI is set and sync to Supabase
   const initCompanion = useCallback(async () => {
     if (!user) return
@@ -76,7 +83,7 @@ export function DashboardPage() {
     })
 
     if (result.data) {
-      const c = result.data as { id: string; level: number; xp: number; message_count: number }
+      const c = result.data
       setCompanionId(c.id)
       setCompanionLevel(c.level ?? 1)
       setCompanionXP(c.xp ?? 0)
@@ -107,12 +114,17 @@ export function DashboardPage() {
 
     // Load purchased companions (prebuilt / custom only)
     const all = await getCompanions()
-    const purchased = (all as PurchasedCompanion[]).filter((c) => c.companion_type !== 'free')
+    const purchased = (all as unknown as PurchasedCompanion[]).filter((c) => c.companion_type !== 'free')
     setPurchasedCompanions(purchased)
 
     // Load order history
     const orderHistory = await getOrders()
     setOrders(orderHistory as Order[])
+
+    // Load pending shop skill upgrades
+    const pending = await getPendingSkills()
+    setPendingSkills(pending as PendingSkill[])
+    if ((pending as PendingSkill[]).length > 0) setShowAssignModal(true)
 
     setChatLoading(false)
   }, [user, initFreeAI])
@@ -308,6 +320,18 @@ export function DashboardPage() {
               <Download className="size-4 text-primary" />
               <h2 className="font-heading font-bold text-lg">My AI Companions</h2>
               <Badge variant="secondary" className="text-xs">{purchasedCompanions.length}</Badge>
+              {pendingSkills.length > 0 && (
+                <button
+                  onClick={() => setShowAssignModal(true)}
+                  className="ml-auto flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: 'oklch(0.75 0.18 195 / 15%)', color: 'oklch(0.82 0.2 195)', border: '1px solid oklch(0.75 0.18 195 / 30%)' }}
+                >
+                  <span className="size-4 rounded-full bg-current/20 flex items-center justify-center text-[10px] font-bold">
+                    {pendingSkills.length}
+                  </span>
+                  Upgrades to assign
+                </button>
+              )}
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {purchasedCompanions.map((c) => (
@@ -590,6 +614,16 @@ export function DashboardPage() {
         <DeployModal
           companion={deployTarget}
           onClose={() => setDeployTarget(null)}
+        />
+      )}
+
+      {/* Assign Skill Modal */}
+      {showAssignModal && (
+        <AssignSkillModal
+          pendingSkills={pendingSkills}
+          companions={purchasedCompanions}
+          onClose={() => setShowAssignModal(false)}
+          onAssigned={(id) => setPendingSkills((prev) => prev.filter((s) => s.id !== id))}
         />
       )}
     </div>
