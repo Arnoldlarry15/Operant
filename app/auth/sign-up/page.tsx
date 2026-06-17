@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { OperantLogo } from '@/components/operant-logo'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -27,13 +28,14 @@ export default function SignUpPage() {
     setError(null)
 
     const supabase = createClient()
+    const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo:
           process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-          `${window.location.origin}/auth/callback`,
+          `${publicSiteUrl || window.location.origin}/auth/callback`,
         data: { display_name: displayName },
       },
     })
@@ -53,13 +55,7 @@ export default function SignUpPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <div className="size-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
-                <line x1="12" y1="22" x2="12" y2="15.5"/>
-                <polyline points="22 8.5 12 15.5 2 8.5"/>
-              </svg>
-            </div>
+            <OperantLogo size={40} className="shadow-lg shadow-primary/30" />
             <span className="text-2xl font-bold font-sans tracking-tight text-foreground">Operant</span>
           </Link>
           <p className="text-muted-foreground mt-2 text-sm">Your AI agent platform</p>
@@ -144,3 +140,5 @@ export default function SignUpPage() {
     </div>
   )
 }
+
+

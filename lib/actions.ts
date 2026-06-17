@@ -20,13 +20,14 @@ import {
 
 export async function signUp(email: string, password: string, displayName: string) {
   const supabase = await createClient()
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ''
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo:
         process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-        `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/auth/callback`,
+        `${siteUrl.replace(/\/$/, '')}/auth/callback`,
       data: { display_name: displayName },
     },
   })

@@ -13,9 +13,14 @@ export const metadata: Metadata = {
   title: 'Operant - Build Purpose-Built AI Agents',
   description: 'Buy prebuilt AI agents, build custom agents from modular components, and upgrade them with specialized skills.',
   keywords: 'AI agent, custom AI agent, prebuilt AI agent, AI automation, modular AI, AI skills, Operant',
+  icons: {
+    icon: '/operant-logo.png',
+    apple: '/operant-logo.png',
+  },
   openGraph: {
     title: 'Operant - Build Purpose-Built AI Agents',
     description: 'Buy prebuilt AI agents, build custom agents, and upgrade them with specialized skills.',
+    images: ['/operant-logo.png'],
     type: 'website',
   },
 }

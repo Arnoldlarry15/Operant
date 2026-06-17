@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { prebuiltAIs } from '@/lib/store-data'
 import Image from 'next/image'
+import { OperantLogo } from '@/components/operant-logo'
 
 export function HomePage() {
   const { setPage } = useAppState()
@@ -325,9 +326,7 @@ export function HomePage() {
       <footer className="py-10 px-4 border-t border-border">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="size-6 rounded flex items-center justify-center" style={{ background: 'oklch(0.75 0.18 195)' }}>
-              <Zap className="size-3.5 text-black" />
-            </div>
+            <OperantLogo size={24} />
             <span className="font-heading font-bold text-gradient">Operant</span>
           </div>
           <p className="text-xs text-muted-foreground">Build the AI you&apos;ve always wanted. &copy; 2025 Operant Inc.</p>

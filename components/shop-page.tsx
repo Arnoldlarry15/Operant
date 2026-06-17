@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from 'react'
 import { ShoppingCart, Check, Sparkles, Tag, Flame, Star, Filter } from 'lucide-react'
@@ -22,6 +22,29 @@ const iconMap: Record<string, React.ElementType> = {
   Play: Icons.Play,
   Wind: Icons.Wind,
   ChefHat: Icons.ChefHat,
+  ClipboardList: Icons.ClipboardList,
+  Timer: Icons.Timer,
+  Users: Icons.Users,
+  Briefcase: Icons.Briefcase,
+  Palette: Icons.Palette,
+  Quote: Icons.Quote,
+  BadgeCheck: Icons.BadgeCheck,
+  Table2: Icons.Table2,
+  Presentation: Icons.Presentation,
+  FileText: Icons.FileText,
+  Sheet: Icons.Sheet,
+  MessageSquare: Icons.MessageSquare,
+  Handshake: Icons.Handshake,
+  GraduationCap: Icons.GraduationCap,
+  UserRoundCheck: Icons.UserRoundCheck,
+  Map: Icons.Map,
+  StretchHorizontal: Icons.StretchHorizontal,
+  CircleHelp: Icons.CircleHelp,
+  PanelTop: Icons.PanelTop,
+  Sun: Icons.Sun,
+  Scale: Icons.Scale,
+  FileCheck2: Icons.FileCheck2,
+  TableProperties: Icons.TableProperties,
   Globe: Icons.Globe,
   Code: Icons.Code,
   Image: Icons.Image,
@@ -309,10 +332,10 @@ export function ShopPage() {
             <div className="card-glass rounded-2xl p-6 text-center" style={{ border: '1px solid oklch(0.75 0.18 195 / 15%)' }}>
               <Star className="size-8 text-primary mx-auto mb-3" />
               <h3 className="font-heading font-bold text-lg mb-2">Top Rated This Week</h3>
-              <p className="text-sm text-muted-foreground mb-4">Memory Vault is the most popular upgrade with a 4.9 star rating from 2,300+ users.</p>
+              <p className="text-sm text-muted-foreground mb-4">Memory Vault is a popular upgrade for continuity notes, preferences, and reusable context.</p>
               <Button style={{ background: 'oklch(0.75 0.18 195)', color: '#000' }} onClick={() => handleAdd(shopItems[1])}>
                 <ShoppingCart className="size-4" data-icon="inline-start" />
-                Add Memory Vault — $19
+                Add Memory Vault - $25
               </Button>
             </div>
           </TabsContent>
@@ -321,3 +344,4 @@ export function ShopPage() {
     </div>
   )
 }
+

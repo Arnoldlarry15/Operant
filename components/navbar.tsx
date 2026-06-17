@@ -1,6 +1,6 @@
 "use client"
 
-import { ShoppingCart, Menu, X, Zap, LogOut, CheckCircle, Bot } from 'lucide-react'
+import { ShoppingCart, Menu, X, LogOut, CheckCircle, Bot } from 'lucide-react'
 import { useAppState } from '@/lib/app-state'
 import { useAuth } from '@/components/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { StripeCheckout, CheckoutSuccess } from '@/components/stripe-checkout'
+import { OperantLogo } from '@/components/operant-logo'
 
 const navLinks = [
   { label: 'Home', page: 'home' as const },
@@ -92,9 +93,7 @@ export function Navbar() {
       >
         {/* Logo */}
         <button onClick={() => setPage('home')} className="flex items-center gap-2 mr-8 group">
-          <div className="size-8 rounded-lg flex items-center justify-center glow-cyan" style={{ background: 'oklch(0.75 0.18 195)' }}>
-            <Zap className="size-4 text-black" />
-          </div>
+          <OperantLogo size={32} className="glow-cyan" />
           <span className="font-heading font-bold text-xl text-gradient tracking-tight">Operant</span>
         </button>
 
@@ -335,9 +334,7 @@ export function Navbar() {
           <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
           <div className="flex flex-col gap-2 pt-8">
             <div className="flex items-center gap-2 mb-6">
-              <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: 'oklch(0.75 0.18 195)' }}>
-                <Zap className="size-4 text-black" />
-              </div>
+              <OperantLogo size={32} />
               <span className="font-heading font-bold text-xl text-gradient">Operant</span>
             </div>
             {navLinks.map((link) => (
