@@ -15,6 +15,7 @@ const required = [
     { label: 'PGHOST', names: ['PGHOST'] },
     { label: 'PGDATABASE', names: ['PGDATABASE'] },
     { label: 'PGUSER', names: ['PGUSER'] },
+    { label: 'PGSSLMODE', names: ['PGSSLMODE'], validate: (value) => value === 'verify-full' },
     { label: 'AWS_REGION', names: ['AWS_REGION'] },
     { label: 'AWS_ROLE_ARN', names: ['AWS_ROLE_ARN'] },
   ]],
@@ -86,9 +87,9 @@ for (const [group, checks] of required) {
   for (const item of checks) {
     const foundValues = item.names.map((name) => values.get(name) ?? '').filter(Boolean)
     const present = foundValues.length > 0
-    const valid = foundValues.some((value) => !placeholders.test(value))
+    const valid = foundValues.some((value) => !placeholders.test(value) && (!item.validate || item.validate(value)))
     ok &&= valid
-    const status = valid ? 'ok' : present ? 'placeholder' : 'missing'
+    const status = valid ? 'ok' : present ? 'invalid' : 'missing'
     console.log(`  ${status.padEnd(11)} ${item.label}`)
   }
   console.log('')

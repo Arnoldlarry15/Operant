@@ -18,6 +18,13 @@ function getPool(): Pool {
   const { awsCredentialsProvider } = require('@vercel/functions/oidc') as typeof import('@vercel/functions/oidc')
   const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
 
+  const port = Number(process.env.PGPORT ?? 5432)
+  const sslMode = (process.env.PGSSLMODE ?? 'verify-full').toLowerCase()
+  const ssl =
+    sslMode === 'disable'
+      ? false
+      : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
+
   const signer = new Signer({
     credentials: awsCredentialsProvider({
       roleArn: process.env.AWS_ROLE_ARN!,
@@ -26,16 +33,16 @@ function getPool(): Pool {
     region: process.env.AWS_REGION,
     hostname: process.env.PGHOST!,
     username: process.env.PGUSER || 'postgres',
-    port: 5432,
+    port,
   })
 
   const pool = new Pool({
     host: process.env.PGHOST,
     database: process.env.PGDATABASE || 'postgres',
-    port: 5432,
+    port,
     user: process.env.PGUSER || 'postgres',
     password: () => signer.getAuthToken(),
-    ssl: { rejectUnauthorized: false },
+    ssl,
     max: 20,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 30_000,

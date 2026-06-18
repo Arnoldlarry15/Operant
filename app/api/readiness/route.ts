@@ -15,7 +15,7 @@ function isAuthorized(req: NextRequest): boolean {
   if (!token) return false
 
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
-  const queryToken = req.nextUrl.searchParams.get('token')
+  const queryToken = process.env.NODE_ENV === 'production' ? null : req.nextUrl.searchParams.get('token')
   return bearer === token || queryToken === token
 }
 

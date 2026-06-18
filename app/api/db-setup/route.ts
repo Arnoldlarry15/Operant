@@ -21,7 +21,8 @@ function json(body: unknown, init?: ResponseInit) {
 export async function POST(req: Request) {
   const url = new URL(req.url)
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim()
-  const token = bearer || url.searchParams.get('token')
+  const queryToken = process.env.NODE_ENV === 'production' ? null : url.searchParams.get('token')
+  const token = bearer || queryToken
   if (!process.env.SETUP_TOKEN || token !== process.env.SETUP_TOKEN) {
     return json({ error: 'Unauthorized' }, { status: 401 })
   }

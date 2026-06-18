@@ -26,6 +26,7 @@ export function getConfigurationReadiness(): ReadinessReport {
     check('aurora_host', hasEnv('PGHOST'), 'Required for Aurora PostgreSQL.'),
     check('aurora_database', hasEnv('PGDATABASE'), 'Required for Aurora PostgreSQL.'),
     check('aurora_user', hasEnv('PGUSER'), 'Required for Aurora PostgreSQL.'),
+    check('aurora_ssl_mode', hasEnv('PGSSLMODE'), 'Set to verify-full in production to verify the Aurora TLS certificate.'),
     check('aurora_aws_region', hasEnv('AWS_REGION'), 'Required for IAM database auth.'),
     check('aurora_aws_role', hasEnv('AWS_ROLE_ARN'), 'Required for Vercel OIDC to assume the RDS auth role.'),
     check('stripe_publishable_key', hasEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'), 'Required for embedded Checkout.'),
@@ -48,6 +49,7 @@ export async function getOperationalReadiness(): Promise<ReadinessReport> {
     hasEnv('PGHOST') &&
     hasEnv('PGDATABASE') &&
     hasEnv('PGUSER') &&
+    hasEnv('PGSSLMODE') &&
     hasEnv('AWS_REGION') &&
     hasEnv('AWS_ROLE_ARN')
   ) {

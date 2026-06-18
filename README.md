@@ -75,11 +75,15 @@ Aurora PostgreSQL:
 
 ```text
 PGHOST
+PGPORT
 PGDATABASE
 PGUSER
+PGSSLMODE
 AWS_REGION
 AWS_ROLE_ARN
 ```
+
+Use `PGSSLMODE=verify-full` in production so the Aurora TLS certificate is verified. Local development can use another PostgreSQL SSL mode only when your local database setup requires it.
 
 Stripe:
 
@@ -163,6 +167,7 @@ Authorization: Bearer YOUR_SETUP_TOKEN
 ```
 
 The setup route also accepts `?token=...` for manual browser testing, but bearer auth is preferred so tokens are less likely to appear in logs. The setup route only allows approved migration files from `scripts/`.
+In production, query-string tokens are disabled; use the bearer header.
 
 ## Readiness Check
 
@@ -182,6 +187,8 @@ GET /api/readiness?mode=operational
 Authorization: Bearer YOUR_READINESS_TOKEN
 ```
 
+For the same log-safety reason, readiness tokens are accepted in query strings only outside production.
+
 ## Verification Commands
 
 Run these before deploying:
@@ -189,11 +196,12 @@ Run these before deploying:
 ```bash
 npm run check:env
 npm run verify:production
+npm audit --audit-level=moderate
 npm run lint
 npm run build
 ```
 
-`npm run check:env` is expected to fail until real local or shell environment variables are present.
+`npm run check:env` is expected to fail until real local or shell environment variables are present. `STRIPE_WEBHOOK_SECRET` must be the real `whsec_...` value from the Stripe webhook endpoint; do not use a placeholder because webhook signature verification depends on this exact secret.
 
 ## Important Product Boundaries
 
