@@ -1,6 +1,6 @@
 -- ============================================================
 -- Migration 003: Production Aurora schema hardening
--- Supabase handles auth only. Application data lives in Aurora.
+-- Cognito handles auth only. Application data lives in Aurora.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

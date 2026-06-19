@@ -7,9 +7,9 @@ const files = ['.env.local']
 const placeholders = /your-|replace-with|\.\.\.|placeholder/i
 
 const required = [
-  ['Supabase Auth', [
-    { label: 'NEXT_PUBLIC_SUPABASE_URL', names: ['NEXT_PUBLIC_SUPABASE_URL'] },
-    { label: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', names: ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] },
+  ['Cognito Auth', [
+    { label: 'COGNITO_USER_POOL_ID', names: ['COGNITO_USER_POOL_ID'] },
+    { label: 'COGNITO_USER_POOL_CLIENT_ID', names: ['COGNITO_USER_POOL_CLIENT_ID'] },
   ]],
   ['Aurora', [
     { label: 'PGHOST', names: ['PGHOST'] },
@@ -18,6 +18,16 @@ const required = [
     { label: 'PGSSLMODE', names: ['PGSSLMODE'], validate: (value) => value === 'verify-full' },
     { label: 'AWS_REGION', names: ['AWS_REGION'] },
     { label: 'AWS_ROLE_ARN', names: ['AWS_ROLE_ARN'] },
+  ]],
+  ['AWS Secrets Manager', [
+    { label: 'AWS_SECRETS_MANAGER_CONFIG_SECRET_ID', names: ['AWS_SECRETS_MANAGER_CONFIG_SECRET_ID'] },
+  ]],
+  ['AWS S3', [
+    { label: 'AGENT_ASSETS_BUCKET', names: ['AGENT_ASSETS_BUCKET'] },
+  ]],
+  ['PostHog', [
+    { label: 'NEXT_PUBLIC_POSTHOG_KEY', names: ['NEXT_PUBLIC_POSTHOG_KEY'] },
+    { label: 'NEXT_PUBLIC_POSTHOG_HOST', names: ['NEXT_PUBLIC_POSTHOG_HOST'] },
   ]],
   ['Stripe', [
     { label: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', names: ['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'] },

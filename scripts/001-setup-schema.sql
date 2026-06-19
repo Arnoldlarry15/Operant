@@ -1,6 +1,6 @@
 -- ============================================================
 -- Operant - Aurora PostgreSQL schema
--- Supabase handles auth only. Application data lives in Aurora.
+-- Cognito handles auth only. Application data lives in Aurora.
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;

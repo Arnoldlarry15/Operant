@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getStripe } from '@/lib/stripe'
 import { fulfillCheckoutSession } from '@/lib/fulfill-order'
 import { updateOrderStatusByStripeSession } from '@/lib/queries'
+import { captureServerEvent } from '@/lib/posthog'
 import type Stripe from 'stripe'
 
 export const runtime = 'nodejs'
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[stripe-webhook] Received event: ${event.type} (${event.id})`)
+  captureServerEvent('stripe-webhook', 'stripe_webhook_received', { type: event.type })
 
   switch (event.type) {
     case 'checkout.session.completed':

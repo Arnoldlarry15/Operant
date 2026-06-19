@@ -6,6 +6,7 @@ import { query } from '@/lib/db'
 import type { CanonicalCheckoutCartItem, CheckoutCartItem } from '@/lib/checkout-types'
 import { prebuiltAIs, personalities, cores, appearances, skills, shopItems } from '@/lib/store-data'
 import { DEFAULT_AGENT_MODEL } from '@/lib/agent-models'
+import { captureServerError, captureServerEvent } from '@/lib/posthog'
 import { z } from 'zod'
 
 export type CheckoutSessionPayload = {
@@ -183,6 +184,7 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
       [user.id, JSON.stringify(orderItems), totalCents, session.id],
     )
   } catch (err) {
+    captureServerError(user.id, err, { action: 'start_checkout_session' })
     try {
       await stripe.checkout.sessions.expire(session.id)
     } catch (expireErr) {
@@ -193,6 +195,11 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
     }
     throw new Error(`Failed to create pending Aurora order: ${String(err)}`)
   }
+
+  captureServerEvent(user.id, 'checkout_session_created', {
+    itemCount: orderItems.length,
+    totalCents,
+  })
 
   return { clientSecret: session.client_secret, sessionId: session.id }
 }
@@ -208,5 +215,8 @@ export async function fulfillOrder(sessionId: string) {
   const { fulfillCheckoutSession } = await import('@/lib/fulfill-order')
   const result = await fulfillCheckoutSession(sessionId, { expectedUserId: user.id })
   if (!result.success) return { error: result.error }
+  captureServerEvent(user.id, 'checkout_fulfillment_confirmed', {
+    companionCount: result.companions.length,
+  })
   return { success: true, companions: result.companions }
 }

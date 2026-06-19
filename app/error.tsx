@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import posthog from 'posthog-js'
 import { AlertTriangle, RotateCcw, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -14,6 +15,7 @@ export default function ErrorBoundary({
 }) {
   useEffect(() => {
     console.error('[PageError]', error)
+    posthog.captureException(error, { digest: error.digest, boundary: 'page' })
   }, [error])
 
   return (

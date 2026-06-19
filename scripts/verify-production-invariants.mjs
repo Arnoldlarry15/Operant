@@ -44,9 +44,33 @@ function assertFileContains(path, description, pattern) {
   }
 }
 
+function assertFileMissing(path, description) {
+  if (existsSync(join(root, path))) {
+    failures.push(`${description}: ${path}`)
+  }
+}
+
 assertNoMatch(
-  'Supabase must not be used for app data',
-  /supabase\.(from|rpc|storage)|\.from\(['"`](profiles|companions)['"`]\)|SUPABASE_SERVICE_ROLE_KEY|createAdminClient/,
+  'Supabase must not be used',
+  /supabase|@supabase|NEXT_PUBLIC_SUPABASE|SUPABASE_SERVICE_ROLE_KEY|createAdminClient/i,
+)
+
+assertFileContains(
+  'lib/cognito.ts',
+  'Cognito helper must stay server-only and use Cognito Identity Provider',
+  /import 'server-only'[\s\S]*CognitoIdentityProviderClient[\s\S]*USER_PASSWORD_AUTH[\s\S]*GetUserCommand/,
+)
+
+assertFileContains(
+  'app/api/auth/login/route.ts',
+  'Cognito login route must set httpOnly app auth cookies',
+  /signInWithCognito[\s\S]*setAuthCookies/,
+)
+
+assertFileContains(
+  'app/api/auth/me/route.ts',
+  'Cognito me route must bridge authenticated users into Aurora',
+  /getCognitoUserFromCookies[\s\S]*ensureUser/,
 )
 
 assertNoMatch(
@@ -75,16 +99,14 @@ assertNoMatch(
   /ANTHROPIC_API_KEY|OPENAI_API_KEY|sk-ant|Get a free API key|Enter your Anthropic API key|pip install anthropic|import anthropic/,
 )
 
-assertFileContains(
+assertFileMissing(
   'app/api/chat/free/route.ts',
-  'Legacy free chat route must be gone',
-  /status:\s*410/,
+  'Legacy free chat route must be removed',
 )
 
-assertFileContains(
+assertFileMissing(
   'app/api/chat/companion/route.ts',
-  'Legacy companion chat endpoint must be retired',
-  /status:\s*410/,
+  'Legacy companion chat endpoint must be removed',
 )
 
 assertFileContains(
@@ -114,7 +136,7 @@ assertFileContains(
 assertFileContains(
   'lib/readiness.ts',
   'Readiness checks must cover required production service configuration',
-  /NEXT_PUBLIC_SUPABASE_URL[\s\S]*PGHOST[\s\S]*STRIPE_SECRET_KEY[\s\S]*STRIPE_WEBHOOK_SECRET[\s\S]*AI_GATEWAY_API_KEY[\s\S]*SETUP_TOKEN/,
+  /COGNITO_USER_POOL_ID[\s\S]*COGNITO_USER_POOL_CLIENT_ID[\s\S]*PGHOST[\s\S]*AWS_SECRETS_MANAGER_CONFIG_SECRET_ID[\s\S]*AGENT_ASSETS_BUCKET[\s\S]*NEXT_PUBLIC_POSTHOG_KEY[\s\S]*STRIPE_SECRET_KEY[\s\S]*STRIPE_WEBHOOK_SECRET[\s\S]*AI_GATEWAY_API_KEY[\s\S]*SETUP_TOKEN/,
 )
 
 assertFileContains(
@@ -177,6 +199,12 @@ assertFileContains(
 )
 
 assertFileContains(
+  'scripts/check-env.mjs',
+  'Environment wiring check must cover AWS Secrets Manager, S3, and PostHog',
+  /AWS_SECRETS_MANAGER_CONFIG_SECRET_ID[\s\S]*AGENT_ASSETS_BUCKET[\s\S]*NEXT_PUBLIC_POSTHOG_KEY[\s\S]*NEXT_PUBLIC_POSTHOG_HOST/,
+)
+
+assertFileContains(
   'lib/db.ts',
   'Aurora database client must stay server-only',
   /import 'server-only'/,
@@ -186,6 +214,36 @@ assertFileContains(
   'lib/queries.ts',
   'Aurora query helpers must stay server-only',
   /import 'server-only'/,
+)
+
+assertFileContains(
+  'lib/secrets.ts',
+  'Secrets Manager helper must stay server-only',
+  /import 'server-only'[\s\S]*SecretsManagerClient[\s\S]*GetSecretValueCommand/,
+)
+
+assertFileContains(
+  'lib/s3.ts',
+  'S3 helper must stay server-only and use the agent assets bucket',
+  /import 'server-only'[\s\S]*S3Client[\s\S]*AGENT_ASSETS_BUCKET[\s\S]*getSignedUrl/,
+)
+
+assertFileContains(
+  'app/api/assets/upload/route.ts',
+  'Agent asset uploads must use authenticated serverless signed S3 URLs',
+  /getCurrentUser[\s\S]*createAgentAssetUploadUrl[\s\S]*contentType/,
+)
+
+assertFileContains(
+  'components/posthog-provider.tsx',
+  'PostHog client provider must capture analytics and identify signed-in users',
+  /posthog\.init[\s\S]*capture_pageview:\s*false[\s\S]*posthog\.capture\('\$pageview'[\s\S]*posthog\.identify/,
+)
+
+assertFileContains(
+  'lib/posthog.ts',
+  'PostHog server helper must support product telemetry and error capture',
+  /posthog-node[\s\S]*captureServerEvent[\s\S]*captureServerError/,
 )
 
 assertFileContains(

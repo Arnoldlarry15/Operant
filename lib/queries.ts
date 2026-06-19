@@ -14,7 +14,7 @@ import type { CheckoutCartItem } from './checkout-types'
 
 /**
  * Ensure an Aurora `users` row exists for the given external identity
- * (e.g. a Supabase auth user). Returns the Aurora user id.
+ * (e.g. a Cognito auth user). Returns the Aurora user id.
  */
 export async function ensureUser(email: string, name?: string | null): Promise<UserRow> {
   const { rows } = await query<UserRow>(

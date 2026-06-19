@@ -1,7 +1,6 @@
-﻿"use client"
+"use client"
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,22 +26,16 @@ export default function SignUpPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-          `${publicSiteUrl || window.location.origin}/auth/callback`,
-        data: { display_name: displayName },
-      },
+    const response = await fetch('/api/auth/sign-up', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, email, password }),
     })
 
     setLoading(false)
-    if (error) {
-      setError(error.message)
+    if (!response.ok) {
+      const data = await response.json().catch(() => null)
+      setError(data?.error ?? 'Could not create account.')
       return
     }
 
@@ -52,7 +45,6 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
             <OperantLogo size={40} className="shadow-lg shadow-primary/30" />
@@ -112,9 +104,7 @@ export default function SignUpPage() {
                 />
               </div>
 
-              {/* Embedded guidance callout */}
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 flex items-start gap-3">
-                <span className="text-xl">🎁</span>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Guidance bot included</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -125,7 +115,7 @@ export default function SignUpPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-2">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating account…' : 'Create Free Account'}
+                {loading ? 'Creating account...' : 'Create Free Account'}
               </Button>
               <p className="text-sm text-muted-foreground text-center">
                 Already have an account?{' '}
@@ -140,5 +130,3 @@ export default function SignUpPage() {
     </div>
   )
 }
-
-

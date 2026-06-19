@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth'
 import { DEFAULT_SUPPORT_MODEL } from '@/lib/agent-models'
 import { hasAiGatewayAuth } from '@/lib/ai-runtime'
+import { captureServerError, captureServerEvent } from '@/lib/posthog'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,6 +65,10 @@ export async function POST(req: Request) {
       )
     }
 
+    captureServerEvent(user.id, 'support_chat_started', {
+      messageCount: parsed.data.messages.length,
+    })
+
     const result = streamText({
       model: DEFAULT_SUPPORT_MODEL,
       system: buildSupportPrompt(),
@@ -74,6 +79,7 @@ export async function POST(req: Request) {
 
     return result.toTextStreamResponse()
   } catch (err) {
+    captureServerError('unknown', err, { route: '/api/chat/support' })
     console.error('[POST /api/chat/support]', err)
     return new Response('Support chat failed', { status: 500 })
   }

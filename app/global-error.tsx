@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from 'react'
+import posthog from 'posthog-js'
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -13,6 +14,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('[GlobalError]', error)
+    posthog.captureException(error, { digest: error.digest, boundary: 'global' })
   }, [error])
 
   return (

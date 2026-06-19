@@ -1,9 +1,8 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
-import { redirect } from 'next/navigation'
 import type { CheckoutCartItem } from '@/lib/checkout-types'
+import { signUpWithCognito } from '@/lib/cognito'
 import { z } from 'zod'
 
 // Verify query is imported above
@@ -15,43 +14,33 @@ import {
   listOrders,
 } from '@/lib/queries'
 
-// Auth
-// Auth always goes through Supabase; data always goes through Aurora.
+// Auth always goes through Cognito; data always goes through Aurora.
 
 export async function signUp(email: string, password: string, displayName: string) {
-  const supabase = await createClient()
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const { error } = await supabase.auth.signUp({
+  try {
+    await signUpWithCognito({
     email,
     password,
-    options: {
-      emailRedirectTo:
-        process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-        `${siteUrl.replace(/\/$/, '')}/auth/callback`,
-      data: { display_name: displayName },
-    },
-  })
-  if (error) return { error: error.message }
+      displayName,
+    })
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) }
+  }
   return { success: true }
 }
 
 export async function signIn(email: string, password: string) {
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) return { error: error.message }
-  return { success: true }
+  void email
+  void password
+  return { error: 'Use the Cognito-backed /api/auth/login route so auth cookies can be set securely.' }
 }
 
 export async function signOut() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-  redirect('/')
+  return { error: 'Use the Cognito-backed /api/auth/logout route so auth cookies can be cleared securely.' }
 }
 
 export async function getUser() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  return getCurrentUser()
 }
 
 // Agents

@@ -1,6 +1,7 @@
 import 'server-only'
 import { Pool, type PoolClient } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
+import { getAwsCredentials, getAwsRegion } from '@/lib/aws'
 
 // ---------------------------------------------------------------------------
 // Lazy pool - created only on first actual query, not at import time.
@@ -12,10 +13,6 @@ const g = globalThis as unknown as { __operantPool?: Pool }
 function getPool(): Pool {
   if (g.__operantPool) return g.__operantPool
 
-  // These are only available inside a real Vercel runtime (or local dev with
-  // env vars loaded). Importing them here (inside the function) avoids the
-  // module-level crash.
-  const { awsCredentialsProvider } = require('@vercel/functions/oidc') as typeof import('@vercel/functions/oidc')
   const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
 
   const port = Number(process.env.PGPORT ?? 5432)
@@ -26,11 +23,8 @@ function getPool(): Pool {
       : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
 
   const signer = new Signer({
-    credentials: awsCredentialsProvider({
-      roleArn: process.env.AWS_ROLE_ARN!,
-      clientConfig: { region: process.env.AWS_REGION },
-    }),
-    region: process.env.AWS_REGION,
+    credentials: getAwsCredentials(),
+    region: getAwsRegion(),
     hostname: process.env.PGHOST!,
     username: process.env.PGUSER || 'postgres',
     port,

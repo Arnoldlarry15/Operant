@@ -1,5 +1,5 @@
 -- Migration 002: Atomic XP increment function for Aurora PostgreSQL
--- Supabase handles auth only; run this in Aurora/RDS, not Supabase.
+-- Cognito handles auth only; run this in Aurora/RDS.
 
 CREATE OR REPLACE FUNCTION increment_companion_xp(
   p_companion_id UUID,

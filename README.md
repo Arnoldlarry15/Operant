@@ -2,7 +2,7 @@
 
 Operant is an AI agent store built with Next.js. Customers can buy prebuilt AI agents, build custom agents from modular parts, purchase upgrades, assign those upgrades to owned agents, and chat with their paid agents.
 
-Supabase is used for authentication only. Application data lives in Aurora PostgreSQL. Stripe handles checkout and payment webhooks.
+AWS Cognito is used for authentication only. Application data lives in Aurora PostgreSQL. Stripe handles checkout and payment webhooks. S3 stores private agent files, images, and generated assets. AWS Secrets Manager stores server-side configuration secrets. PostHog handles analytics, feature flags, error tracking, and product telemetry.
 
 ## What This App Does
 
@@ -19,13 +19,16 @@ There is no free companion product in the active scope.
 
 - Next.js App Router
 - React
-- Vercel v0
-- Vercel AI SDK
-- Vercel deployment
-- AWS Aurora PostgreSQL
-- Supabase Auth
+- TypeScript
+- Vercel deployment and serverless API routes
+- AWS Cognito Auth
+- AWS Aurora PostgreSQL Serverless v2
+- AWS IAM
+- AWS Secrets Manager
+- AWS S3
+- PostHog
 - Stripe Checkout
-
+- Vercel AI SDK
 
 ## Local Setup
 
@@ -65,12 +68,17 @@ http://localhost:3000
 
 ## Required Environment Variables
 
-Supabase Auth:
+AWS Cognito Auth:
 
 ```text
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-NEXT_PUBLIC_SITE_URL
+COGNITO_USER_POOL_ID
+COGNITO_USER_POOL_CLIENT_ID
+```
+
+If your Cognito app client has a client secret, also set:
+
+```text
+COGNITO_USER_POOL_CLIENT_SECRET
 ```
 
 AWS Aurora PostgreSQL:
@@ -79,8 +87,28 @@ AWS Aurora PostgreSQL:
 PGHOST
 PGDATABASE
 PGUSER
+PGSSLMODE
 AWS_REGION
 AWS_ROLE_ARN
+```
+
+AWS Secrets Manager:
+
+```text
+AWS_SECRETS_MANAGER_CONFIG_SECRET_ID
+```
+
+AWS S3:
+
+```text
+AGENT_ASSETS_BUCKET
+```
+
+PostHog:
+
+```text
+NEXT_PUBLIC_POSTHOG_KEY
+NEXT_PUBLIC_POSTHOG_HOST
 ```
 
 Stripe:
@@ -99,21 +127,52 @@ AI_GATEWAY_API_KEY
 
 On Vercel, `VERCEL_OIDC_TOKEN` can satisfy AI Gateway auth instead when your project is linked and AI Gateway is enabled.
 
-Customers do not need Anthropic, OpenAI, or other provider API keys to use purchased agents. Purchased agents run inside the hosted Operant dashboard after the customer signs in. The server-owned default model is set in `lib/agent-models.ts`.
-
-Hosted paid-agent chat has a simple server-side usage guard: each paid agent can receive up to 100 customer messages per rolling 24-hour window. Adjust `DAILY_AGENT_MESSAGE_LIMIT` in `app/api/chat/route.ts` when pricing and plans are finalized.
-
-The embedded support bot also validates message shape and size before calling the hosted model.
-
 App/admin:
 
 ```text
 NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_SITE_URL
 READINESS_TOKEN
 SETUP_TOKEN
 ```
 
-`NEXT_PUBLIC_SITE_URL` may also be set for Supabase auth redirects. In production, keep `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SITE_URL` pointed at the same public Vercel domain.
+## AWS Cognito Setup
+
+Create a Cognito User Pool and app client for Operant auth. The app client must allow username/password sign-in for the server route at:
+
+```text
+POST /api/auth/login
+```
+
+The app stores Cognito access, ID, and refresh tokens in httpOnly cookies. Server code refreshes expired access tokens, resolves the Cognito user, and ensures a matching Aurora `users` row before querying application data.
+
+## AWS S3 Setup
+
+Create a private bucket for agent files, images, and generated assets, then set:
+
+```text
+AGENT_ASSETS_BUCKET
+```
+
+Authenticated users can request short-lived upload URLs through:
+
+```text
+POST /api/assets/upload
+```
+
+## AWS Secrets Manager Setup
+
+Create a text or JSON secret for server-side app configuration and set:
+
+```text
+AWS_SECRETS_MANAGER_CONFIG_SECRET_ID
+```
+
+The readiness endpoint verifies the configured secret can be read during operational checks.
+
+## PostHog Setup
+
+Set `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST`. The app captures pageviews, identifies signed-in users, records server events, and reports client/server errors.
 
 ## Vercel Deployment
 
@@ -177,7 +236,7 @@ GET /api/readiness
 Authorization: Bearer YOUR_READINESS_TOKEN
 ```
 
-Operational check with Aurora ping:
+Operational check with Aurora, S3, and Secrets Manager checks:
 
 ```text
 GET /api/readiness?mode=operational
@@ -199,8 +258,11 @@ npm run build
 
 ## Important Product Boundaries
 
-- Supabase is auth only.
+- Cognito is auth only.
 - Aurora stores users, agents, orders, conversations, skills, milestones, and fulfillment state.
+- S3 stores private agent files, images, and generated assets.
+- Secrets Manager stores server-side configuration secrets.
+- PostHog handles analytics, feature flags, error tracking, and product telemetry.
 - Stripe is the source of payment confirmation.
 - Paid agents are provisioned from server-side catalog data, not client-submitted prices.
 - Customers do not download, install, or run purchased agents; they use them from the hosted dashboard.
