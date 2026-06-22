@@ -39,7 +39,7 @@ export default function SignUpPage() {
       return
     }
 
-    router.push('/auth/sign-up-success')
+    router.push(`/auth/confirm-signup?email=${encodeURIComponent(email)}`)
   }
 
   return (

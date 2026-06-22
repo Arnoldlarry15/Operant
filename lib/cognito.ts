@@ -2,6 +2,7 @@ import 'server-only'
 
 import {
   CognitoIdentityProviderClient,
+  ConfirmSignUpCommand,
   GetUserCommand,
   InitiateAuthCommand,
   SignUpCommand,
@@ -137,6 +138,18 @@ export async function signUpWithCognito(input: {
         { Name: 'email', Value: input.email },
         { Name: 'name', Value: input.displayName },
       ],
+      ...(secretHash ? { SecretHash: secretHash } : {}),
+    }),
+  )
+}
+
+export async function confirmSignUpWithCognito(email: string, code: string): Promise<void> {
+  const secretHash = getSecretHash(email)
+  await getCognitoClient().send(
+    new ConfirmSignUpCommand({
+      ClientId: getUserPoolClientId(),
+      Username: email,
+      ConfirmationCode: code,
       ...(secretHash ? { SecretHash: secretHash } : {}),
     }),
   )
