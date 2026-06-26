@@ -11,12 +11,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Link from 'next/link'
 import { OperantLogo } from '@/components/operant-logo'
 import { toast } from 'sonner'
-import { useAuth } from '@/components/auth-provider'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { refreshProfile } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -47,8 +45,7 @@ function LoginForm() {
     }
 
     toast.success('Welcome back! Signing you in...')
-    await refreshProfile()
-    router.push(searchParams.get('next') ?? '/')
+    window.location.href = searchParams.get('next') ?? '/'
   }
 
   return (
