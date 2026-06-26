@@ -24,7 +24,10 @@ export async function POST(req: Request) {
     captureServerEvent(parsed.data.email, 'auth_sign_in')
     return response
   } catch (err) {
+    console.error('[auth/login] Cognito error:', err)
     captureServerError(parsed.data.email, err, { route: '/api/auth/login' })
-    return NextResponse.json({ error: 'Sign in failed. Check your email and password.' }, { status: 401 })
+    // TEMPORARY: expose raw error for debugging, remove before launch
+    const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    return NextResponse.json({ error: message }, { status: 401 })
   }
 }
