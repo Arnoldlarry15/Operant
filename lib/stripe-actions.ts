@@ -120,91 +120,114 @@ function canonicalizeCartItem(item: CheckoutCartItem): CanonicalCheckoutCartItem
  * Prices, names, item types, and agent metadata are rebuilt server-side.
  */
 export async function startCheckoutSession(input: unknown): Promise<CheckoutSessionPayload> {
-  const user = await getCurrentUser()
-  if (!user) throw new Error('Not authenticated')
-  const parsed = checkoutCartSchema.safeParse(input)
-  if (!parsed.success) throw new Error('Invalid checkout cart')
-  const items = parsed.data as CheckoutCartItem[]
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
-  const stripe = getStripe()
-
-  // Include both auth user id and email so the webhook can resolve the Aurora user row without a session cookie.
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL)?.replace(/\/$/, '')
-  if (!appUrl) throw new Error('NEXT_PUBLIC_APP_URL is not configured')
-
-  const orderItems: CanonicalCheckoutCartItem[] = []
-  const line_items: import('stripe').Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => {
-    const canonicalItem = canonicalizeCartItem(item)
-    if (!canonicalItem) {
-      throw new Error(`Unknown item in cart: ${item.id}`)
-    }
-
-    orderItems.push(canonicalItem)
-
-    return {
-      quantity: 1,
-      price_data: {
-        currency: 'usd',
-        unit_amount: Math.round(canonicalItem.price * 100),
-        product_data: {
-          name: canonicalItem.name,
-          description:
-            canonicalItem.type === 'prebuilt'
-              ? 'Prebuilt AI Agent'
-              : canonicalItem.type === 'custom'
-              ? 'Custom AI Agent'
-              : 'Operant Shop Upgrade',
-        },
-      },
-    }
-  })
-  const totalCents = orderItems.reduce((sum, item) => sum + Math.round(item.price * 100), 0)
-
-  const cartMetadata = JSON.stringify(orderItems).slice(0, 500)
-
-  const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded_page',
-    redirect_on_completion: 'if_required',
-    return_url: `${appUrl}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
-    mode: 'payment',
-    customer_email: user.email ?? undefined,
-    line_items,
-    metadata: {
-      user_id: user.id,
-      user_email: user.email ?? '',
-      order_source: 'operant_embedded_checkout',
-      cart: cartMetadata,
-    },
-  })
-
-  if (!session.client_secret) throw new Error('Failed to create checkout session')
-
   try {
-    await query(
-      `INSERT INTO orders (user_id, items, total_cents, status, stripe_session_id)
-       VALUES ($1, $2::jsonb, $3, 'pending', $4)
-       ON CONFLICT (stripe_session_id) DO NOTHING`,
-      [user.id, JSON.stringify(orderItems), totalCents, session.id],
-    )
-  } catch (err) {
-    captureServerError(user.id, err, { action: 'start_checkout_session' })
+    console.log('[checkout] Starting checkout')
+
+    const user = await getCurrentUser()
+    console.log('[checkout] User:', user?.email)
+
+    if (!user) throw new Error('Not authenticated')
+
+    const parsed = checkoutCartSchema.safeParse(input)
+    console.log('[checkout] Cart valid:', parsed.success)
+
+    if (!parsed.success) throw new Error('Invalid checkout cart')
+
+    const items = parsed.data as CheckoutCartItem[]
+
+    if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
+
+    const stripe = getStripe()
+
+    // Include both auth user id and email so the webhook can resolve the Aurora user row without a session cookie.
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL)?.replace(/\/$/, '')
+    if (!appUrl) throw new Error('NEXT_PUBLIC_APP_URL is not configured')
+
+    const orderItems: CanonicalCheckoutCartItem[] = []
+    const line_items: import('stripe').Stripe.Checkout.SessionCreateParams.LineItem[] = items.map((item) => {
+      const canonicalItem = canonicalizeCartItem(item)
+      if (!canonicalItem) {
+        throw new Error(`Unknown item in cart: ${item.id}`)
+      }
+
+      orderItems.push(canonicalItem)
+
+      return {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: Math.round(canonicalItem.price * 100),
+          product_data: {
+            name: canonicalItem.name,
+            description:
+              canonicalItem.type === 'prebuilt'
+                ? 'Prebuilt AI Agent'
+                : canonicalItem.type === 'custom'
+                ? 'Custom AI Agent'
+                : 'Operant Shop Upgrade',
+          },
+        },
+      }
+    })
+    const totalCents = orderItems.reduce((sum, item) => sum + Math.round(item.price * 100), 0)
+
+    const cartMetadata = JSON.stringify(orderItems).slice(0, 500)
+
+    console.log('[checkout] Creating Stripe session...')
+
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: 'embedded_page',
+      redirect_on_completion: 'if_required',
+      return_url: `${appUrl}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
+      mode: 'payment',
+      customer_email: user.email ?? undefined,
+      line_items,
+      metadata: {
+        user_id: user.id,
+        user_email: user.email ?? '',
+        order_source: 'operant_embedded_checkout',
+        cart: cartMetadata,
+      },
+    })
+
+    console.log('[checkout] Stripe session created:', session.id)
+
+    if (!session.client_secret) throw new Error('Failed to create checkout session')
+
+    console.log('[checkout] Saving pending order to Aurora...')
+
     try {
-      await stripe.checkout.sessions.expire(session.id)
-    } catch (expireErr) {
-      console.error('[stripe-checkout] Failed to expire orphaned checkout session', {
-        sessionId: session.id,
-        error: expireErr,
-      })
+      await query(
+        `INSERT INTO orders (user_id, items, total_cents, status, stripe_session_id)
+         VALUES ($1, $2::jsonb, $3, 'pending', $4)
+         ON CONFLICT (stripe_session_id) DO NOTHING`,
+        [user.id, JSON.stringify(orderItems), totalCents, session.id],
+      )
+
+      console.log('[checkout] Pending order saved.')
+    } catch (err) {
+      captureServerError(user.id, err, { action: 'start_checkout_session' })
+      try {
+        await stripe.checkout.sessions.expire(session.id)
+      } catch (expireErr) {
+        console.error('[stripe-checkout] Failed to expire orphaned checkout session', {
+          sessionId: session.id,
+          error: expireErr,
+        })
+      }
+      throw new Error(`Failed to create pending Aurora order: ${String(err)}`)
     }
-    throw new Error(`Failed to create pending Aurora order: ${String(err)}`)
+
+    captureServerEvent(user.id, 'checkout_session_created', {
+      itemCount: orderItems.length,
+      totalCents,
+    })
+
+    return { clientSecret: session.client_secret, sessionId: session.id }
+  } catch (err) {
+    console.error('[checkout] FAILED:', err)
+    throw err
   }
-
-  captureServerEvent(user.id, 'checkout_session_created', {
-    itemCount: orderItems.length,
-    totalCents,
-  })
-
-  return { clientSecret: session.client_secret, sessionId: session.id }
 }
 
 /**

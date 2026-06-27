@@ -35,6 +35,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   const sessionIdRef = useRef<string | null>(null)
   const { clearCart } = useAppState()
 
+  
   const fetchClientSecret = useCallback(
     async () => {
       setCheckoutError(null)
