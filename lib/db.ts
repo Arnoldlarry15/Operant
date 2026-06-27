@@ -56,8 +56,16 @@ export async function query<T = Record<string, unknown>>(
   text: string,
   params?: unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
-  const res = await getPool().query(text, params)
-  return { rows: res.rows as T[], rowCount: res.rowCount ?? 0 }
+  try {
+    const res = await getPool().query(text, params)
+    return {
+      rows: res.rows as T[],
+      rowCount: res.rowCount ?? 0,
+    }
+  } catch (err) {
+    console.error('[db] Query failed:', err)
+    throw err
+  }
 }
 
 /** Multi-statement transactions. Rolls back on any thrown error. */
