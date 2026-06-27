@@ -59,12 +59,17 @@ export function Navbar() {
   }
 
   function handleCheckout() {
-    if (!user) {
-      toast.error('Sign in to complete your purchase')
-      return
+    console.log("Checkout clicked");
+    console.log("user:", user);
+    console.log("current state:", checkoutState);
+      if (!user) {
+        console.log("No user");
+        toast.error('Sign in to complete your purchase')
+        return
+      }
+      console.log("Switching to stripe");
+      setCheckoutState('stripe')
     }
-    setCheckoutState('stripe')
-  }
 
   function handleStripeSuccess(companions: PurchasedCompanion[]) {
     clearCart()
