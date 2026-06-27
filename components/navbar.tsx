@@ -270,6 +270,9 @@ export function Navbar() {
                     </div>
                   )}
 
+                  <p style={{ color: 'white', fontSize: 12 }}>Loading: {String(authLoading)}</p>
+                  <p style={{ color: 'white', fontSize: 12 }}>User: {user ? user.email : 'null'}</p>
+
                   <Button
                     className="w-full font-bold text-sm h-11"
                     style={{ background: 'oklch(0.75 0.18 195)', color: '#000' }}
