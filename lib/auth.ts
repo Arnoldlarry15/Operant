@@ -14,5 +14,16 @@ export async function getCurrentUser(): Promise<UserRow | null> {
 
   if (!user?.email) return null
 
-  return ensureUser(user.email, user.name)
+  try {
+    return await ensureUser(user.email, user.name)
+  } catch (err) {
+    console.error('[getCurrentUser] Database fallback:', err)
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+  }
 }

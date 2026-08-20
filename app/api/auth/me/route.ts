@@ -26,26 +26,26 @@ export async function GET() {
     return NextResponse.json({ user: null, profile: null }, { status: 401 })
   }
 
+  let profile = null
   try {
-    const profile = await ensureUser(user.email, user.name)
-
-    const response = NextResponse.json({
-      user,
-      profile: {
-        id: profile.id,
-        display_name: profile.name,
-      },
-    })
-
-    if (refreshedAuth) setAuthCookies(response, refreshedAuth)
-    return response
+    const dbUser = await ensureUser(user.email, user.name)
+    profile = {
+      id: dbUser.id,
+      display_name: dbUser.name,
+    }
   } catch (err) {
-    console.error('[auth/me] ensureUser failed:', err)
-    return NextResponse.json(
-      {
-        error: String(err),
-      },
-      { status: 500 }
-    )
+    console.error('[auth/me] ensureUser fallback (database error):', err)
+    profile = {
+      id: user.id,
+      display_name: user.name ?? user.email.split('@')[0],
+    }
   }
+
+  const response = NextResponse.json({
+    user,
+    profile,
+  })
+
+  if (refreshedAuth) await setAuthCookies(response, refreshedAuth)
+  return response
 }
