@@ -59,10 +59,19 @@ function getAttribute(attributes: AttributeType[] | undefined, name: string): st
 
 function toAppUser(attributes: AttributeType[] | undefined): CognitoAppUser | null {
   const id = getAttribute(attributes, 'sub')
-  const email = getAttribute(attributes, 'email')
-  if (!id || !email) return null
+  const email =
+    getAttribute(attributes, 'email') ??
+    getAttribute(attributes, 'username') ??
+    getAttribute(attributes, 'preferred_username')
+  if (!id || !email) {
+    console.error('[toAppUser] Missing sub or email in attributes:', attributes)
+    return null
+  }
 
-  const name = getAttribute(attributes, 'name')
+  const name =
+    getAttribute(attributes, 'name') ??
+    getAttribute(attributes, 'nickname') ??
+    email.split('@')[0]
 
   return {
     id,
@@ -76,31 +85,60 @@ function toAppUser(attributes: AttributeType[] | undefined): CognitoAppUser | nu
 }
 
 function cookieOptions(maxAge?: number) {
+  const isProd = process.env.NODE_ENV === 'production'
+  const isHttps =
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') ||
+    process.env.NEXT_PUBLIC_SITE_URL?.startsWith('https://')
+  const secure = Boolean(isProd && isHttps && !process.env.NEXT_PUBLIC_APP_URL?.includes('localhost'))
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure,
     sameSite: 'lax' as const,
     path: '/',
     ...(maxAge ? { maxAge } : {}),
   }
 }
 
-export function setAuthCookies(response: NextResponse, auth: AuthenticationResultType): void {
+export async function setAuthCookies(response: NextResponse, auth: AuthenticationResultType): Promise<void> {
   if (!auth.AccessToken || !auth.IdToken) throw new Error('Cognito did not return access and id tokens')
 
   const expiresIn = auth.ExpiresIn ?? 3600
-  response.cookies.set(authCookieNames.access, auth.AccessToken, cookieOptions(expiresIn))
-  response.cookies.set(authCookieNames.id, auth.IdToken, cookieOptions(expiresIn))
-  response.cookies.set(authCookieNames.expiresAt, String(Date.now() + expiresIn * 1000), cookieOptions(expiresIn))
+  const options = cookieOptions(expiresIn)
+  const refreshOptions = cookieOptions(30 * 24 * 60 * 60)
+
+  response.cookies.set(authCookieNames.access, auth.AccessToken, options)
+  response.cookies.set(authCookieNames.id, auth.IdToken, options)
+  response.cookies.set(authCookieNames.expiresAt, String(Date.now() + expiresIn * 1000), options)
 
   if (auth.RefreshToken) {
-    response.cookies.set(authCookieNames.refresh, auth.RefreshToken, cookieOptions(30 * 24 * 60 * 60))
+    response.cookies.set(authCookieNames.refresh, auth.RefreshToken, refreshOptions)
+  }
+
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(authCookieNames.access, auth.AccessToken, options)
+    cookieStore.set(authCookieNames.id, auth.IdToken, options)
+    cookieStore.set(authCookieNames.expiresAt, String(Date.now() + expiresIn * 1000), options)
+    if (auth.RefreshToken) {
+      cookieStore.set(authCookieNames.refresh, auth.RefreshToken, refreshOptions)
+    }
+  } catch {
+    // Ignore outside server action / route handler context
   }
 }
 
-export function clearAuthCookies(response: NextResponse): void {
+export async function clearAuthCookies(response: NextResponse): Promise<void> {
   for (const name of Object.values(authCookieNames)) {
     response.cookies.set(name, '', { ...cookieOptions(), maxAge: 0 })
+  }
+  try {
+    const cookieStore = await cookies()
+    for (const name of Object.values(authCookieNames)) {
+      cookieStore.set(name, '', { ...cookieOptions(), maxAge: 0 })
+    }
+  } catch {
+    // Ignore outside server action / route handler context
   }
 }
 
@@ -141,8 +179,6 @@ export async function signUpWithCognito(input: {
     }),
   )
 }
-
-
 
 function extractUsernameFromIdToken(idToken: string): string | null {
   try {
