@@ -38,7 +38,7 @@ export function getConfigurationReadiness(): ReadinessReport {
     check('stripe_publishable_key', hasEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'), 'Required for embedded Checkout.'),
     check('stripe_secret_key', hasEnv('STRIPE_SECRET_KEY'), 'Required for server-side Checkout and fulfillment.'),
     check('stripe_webhook_secret', hasEnv('STRIPE_WEBHOOK_SECRET'), 'Required to verify Stripe webhook signatures.'),
-    check('ai_gateway_auth', hasEnv('AI_GATEWAY_API_KEY') || hasEnv('VERCEL_OIDC_TOKEN'), 'Required for Vercel AI Gateway chat generation.'),
+    check('ai_gateway_auth', hasEnv('AI_GATEWAY_API_KEY') || hasEnv('VERCEL_OIDC_TOKEN') || hasEnv('GOOGLE_GENERATIVE_AI_API_KEY') || hasEnv('GEMINI_API_KEY') || hasEnv('GROQ_API_KEY'), 'Required for AI Gateway, Gemini, or Groq chat generation.'),
     check('app_url', hasEnv('NEXT_PUBLIC_APP_URL') || hasEnv('NEXT_PUBLIC_SITE_URL'), 'Required for Stripe return URLs and auth redirects.'),
     check('readiness_token', hasEnv('READINESS_TOKEN'), 'Required to protect the readiness endpoint.'),
     check('setup_token', hasEnv('SETUP_TOKEN'), 'Required to protect the Aurora setup endpoint.'),

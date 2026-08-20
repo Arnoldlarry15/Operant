@@ -28,7 +28,7 @@ const required = [
     { label: 'STRIPE_WEBHOOK_SECRET', names: ['STRIPE_WEBHOOK_SECRET'] },
   ]],
   ['AI', [
-    { label: 'AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN', names: ['AI_GATEWAY_API_KEY', 'VERCEL_OIDC_TOKEN'] },
+    { label: 'AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN', names: ['AI_GATEWAY_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'VERCEL_OIDC_TOKEN'] },
   ]],
   ['App', [
     { label: 'NEXT_PUBLIC_APP_URL or NEXT_PUBLIC_SITE_URL', names: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'] },

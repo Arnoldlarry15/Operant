@@ -25,11 +25,11 @@ DELETE FROM companions
 WHERE companion_type = 'free';
 
 ALTER TABLE companions
-  ALTER COLUMN model SET DEFAULT 'openai/gpt-5.4';
+  ALTER COLUMN model SET DEFAULT 'google/gemini-2.5-flash';
 
 UPDATE companions
-SET model = 'openai/gpt-5.4'
-WHERE model IN ('openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-5.5');
+SET model = 'google/gemini-2.5-flash'
+WHERE model IN ('openai/gpt-4o', 'openai/gpt-4o-mini', 'openai/gpt-5.5', 'openai/gpt-5.4');
 
 ALTER TABLE companions
   ADD COLUMN IF NOT EXISTS message_count INT NOT NULL DEFAULT 0 CHECK (message_count >= 0);

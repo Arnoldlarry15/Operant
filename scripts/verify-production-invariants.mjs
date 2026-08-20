@@ -343,7 +343,7 @@ if (chatRoute.indexOf('hasAiGatewayAuth()') > chatRoute.indexOf("saveMessage(use
   failures.push('Paid chat must verify AI Gateway auth before saving customer messages')
 }
 
-if (/gpt-4o/.test(agentModels + read(join(root, 'scripts/001-setup-schema.sql'))) || !/ALTER COLUMN model SET DEFAULT 'openai\/gpt-5\.4'/.test(read(join(root, 'scripts/003-full-aurora-schema.sql')))) {
+if (/gpt-4o/.test(agentModels + read(join(root, 'scripts/001-setup-schema.sql'))) || !/ALTER COLUMN model SET DEFAULT 'google\/gemini-2\.5-flash'/.test(read(join(root, 'scripts/003-full-aurora-schema.sql')))) {
   failures.push('Paid agent and support defaults must use the current server-owned AI Gateway model')
 }
 

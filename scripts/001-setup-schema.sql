@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS companions (
   persona         TEXT NOT NULL DEFAULT '',
   emoji           VARCHAR(16) NOT NULL DEFAULT 'AI',
   color           VARCHAR(16) NOT NULL DEFAULT '#6366f1',
-  model           VARCHAR(60) NOT NULL DEFAULT 'openai/gpt-5.4',
+  model           VARCHAR(60) NOT NULL DEFAULT 'google/gemini-2.5-flash',
   level           INT NOT NULL DEFAULT 1 CHECK (level >= 1),
   xp              INT NOT NULL DEFAULT 0 CHECK (xp >= 0),
   skills          JSONB NOT NULL DEFAULT '[]'::jsonb,
