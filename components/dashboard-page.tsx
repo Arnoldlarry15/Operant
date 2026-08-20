@@ -164,14 +164,18 @@ export function DashboardPage() {
             <p className="text-muted-foreground leading-relaxed">Create an account to buy, build, upgrade, and chat with Operant agents.</p>
           </div>
           <div className="flex flex-col gap-3 w-full">
-            <Button className="w-full font-semibold" style={{ background: 'oklch(0.75 0.18 195)', color: '#000' }} render={<Link href="/auth/sign-up" />}>
-              <Gift className="size-4" data-icon="inline-start" />
-              Create Account
-            </Button>
-            <Button variant="outline" className="w-full" render={<Link href="/auth/login" />}>
-              <LogIn className="size-4" data-icon="inline-start" />
-              Sign In
-            </Button>
+            <Link href="/auth/sign-up" className="w-full">
+              <Button className="w-full font-semibold" style={{ background: 'oklch(0.75 0.18 195)', color: '#000' }}>
+                <Gift className="size-4" data-icon="inline-start" />
+                Create Account
+              </Button>
+            </Link>
+            <Link href="/auth/login" className="w-full">
+              <Button variant="outline" className="w-full">
+                <LogIn className="size-4" data-icon="inline-start" />
+                Sign In
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
