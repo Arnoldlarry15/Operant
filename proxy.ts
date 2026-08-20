@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-const protectedPrefixes = ['/dashboard', '/companion', '/api/chat', '/api/companions', '/api/assets']
+const protectedPrefixes = ['/companion', '/api/chat', '/api/companions', '/api/assets']
 const publicApiPrefixes = ['/api/chat/support', '/api/auth', '/api/webhooks/stripe', '/api/readiness', '/api/db-setup']
 
 export function proxy(request: NextRequest) {

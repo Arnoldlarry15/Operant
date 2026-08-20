@@ -48,7 +48,7 @@ function LoginForm() {
 
     await refreshProfile()
     toast.success('Welcome back! Signing you in...')
-    window.location.href = searchParams.get('next') ?? '/dashboard'
+    window.location.href = searchParams.get('next') ?? '/?page=dashboard'
   }
 
   return (
