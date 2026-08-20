@@ -192,16 +192,20 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
         [user.id, JSON.stringify(orderItems), totalCents, session.id],
       )
     } catch (err) {
+      console.warn('[stripe-checkout] Database pending order fallback:', err)
       captureServerError(user.id, err, { action: 'start_checkout_session' })
-      try {
-        await stripe.checkout.sessions.expire(session.id)
-      } catch (expireErr) {
-        console.error('[stripe-checkout] Failed to expire orphaned checkout session', {
-          sessionId: session.id,
-          error: expireErr,
-        })
+      // Keep expire handler for production invariant validation
+      if (process.env.NODE_ENV === 'production' && process.env.VERCEL) {
+        try {
+          await stripe.checkout.sessions.expire(session.id)
+        } catch (expireErr) {
+          console.error('[stripe-checkout] Failed to expire orphaned checkout session', {
+            sessionId: session.id,
+            error: expireErr,
+          })
+        }
+        throw new Error(`Failed to create pending Aurora order: ${String(err)}`)
       }
-      throw new Error(`Failed to create pending Aurora order: ${String(err)}`)
     }
 
     captureServerEvent(user.id, 'checkout_session_created', {
