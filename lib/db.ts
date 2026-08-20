@@ -26,14 +26,21 @@ function getPool(): Pool {
   if (process.env.PGPASSWORD?.trim()) {
     passwordOption = process.env.PGPASSWORD.trim()
   } else {
-    const signer = new Signer({
-      credentials: getAwsCredentials(),
-      region: getAwsRegion(),
-      hostname: process.env.PGHOST!,
-      username: process.env.PGUSER || 'postgres',
-      port,
-    })
-    passwordOption = () => signer.getAuthToken()
+    passwordOption = async () => {
+      try {
+        const signer = new Signer({
+          credentials: getAwsCredentials(),
+          region: getAwsRegion(),
+          hostname: process.env.PGHOST!,
+          username: process.env.PGUSER || 'postgres',
+          port,
+        })
+        return await signer.getAuthToken()
+      } catch (err) {
+        console.warn('[db] AWS IAM RDS Signer failed (using local fallback):', err)
+        return process.env.PGPASSWORD || ''
+      }
+    }
   }
 
   const pool = new Pool({

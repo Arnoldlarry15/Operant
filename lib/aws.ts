@@ -20,8 +20,16 @@ export function getAwsCredentials() {
   const roleArn = process.env.AWS_ROLE_ARN
   if (!roleArn) throw new Error('AWS_ROLE_ARN is not configured')
 
-  return awsCredentialsProvider({
-    roleArn,
-    clientConfig: { region: getAwsRegion() },
-  })
+  try {
+    return awsCredentialsProvider({
+      roleArn,
+      clientConfig: { region: getAwsRegion() },
+    })
+  } catch (err) {
+    console.warn('[getAwsCredentials] Vercel OIDC provider unavailable, using local fallback:', err)
+    return {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
+    }
+  }
 }
