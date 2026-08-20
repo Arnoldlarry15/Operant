@@ -9,6 +9,14 @@ export function getAwsRegion(): string {
 }
 
 export function getAwsCredentials() {
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    return {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
+    }
+  }
+
   const roleArn = process.env.AWS_ROLE_ARN
   if (!roleArn) throw new Error('AWS_ROLE_ARN is not configured')
 

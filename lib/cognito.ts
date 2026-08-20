@@ -149,7 +149,7 @@ function extractUsernameFromIdToken(idToken: string): string | null {
     const parts = idToken.split('.')
     if (parts.length !== 3) return null
     const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'))
-    return decoded.email ?? decoded.cognito_username ?? null
+    return decoded.email ?? decoded['cognito:username'] ?? decoded.cognito_username ?? null
   } catch {
     return null
   }
@@ -191,7 +191,8 @@ export async function getCognitoUserFromAccessToken(accessToken: string): Promis
   try {
     const result = await getCognitoClient().send(new GetUserCommand({ AccessToken: accessToken }))
     return toAppUser(result.UserAttributes)
-  } catch {
+  } catch (err) {
+    console.error('[getCognitoUserFromAccessToken] GetUser error:', err)
     return null
   }
 }

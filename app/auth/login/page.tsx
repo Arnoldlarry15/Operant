@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Link from 'next/link'
 import { OperantLogo } from '@/components/operant-logo'
 import { toast } from 'sonner'
+import { useAuth } from '@/components/auth-provider'
 
 function LoginForm() {
   const searchParams = useSearchParams()
@@ -24,6 +25,8 @@ function LoginForm() {
       toast.success('Email confirmed! You can now sign in.')
     }
   }, [searchParams])
+
+  const { refreshProfile } = useAuth()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -43,6 +46,7 @@ function LoginForm() {
       return
     }
 
+    await refreshProfile()
     toast.success('Welcome back! Signing you in...')
     window.location.href = searchParams.get('next') ?? '/'
   }

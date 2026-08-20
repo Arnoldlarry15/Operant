@@ -22,20 +22,26 @@ function getPool(): Pool {
       ? false
       : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
 
-  const signer = new Signer({
-    credentials: getAwsCredentials(),
-    region: getAwsRegion(),
-    hostname: process.env.PGHOST!,
-    username: process.env.PGUSER || 'postgres',
-    port,
-  })
+  let passwordOption: string | (() => Promise<string>)
+  if (process.env.PGPASSWORD?.trim()) {
+    passwordOption = process.env.PGPASSWORD.trim()
+  } else {
+    const signer = new Signer({
+      credentials: getAwsCredentials(),
+      region: getAwsRegion(),
+      hostname: process.env.PGHOST!,
+      username: process.env.PGUSER || 'postgres',
+      port,
+    })
+    passwordOption = () => signer.getAuthToken()
+  }
 
   const pool = new Pool({
     host: process.env.PGHOST,
     database: process.env.PGDATABASE || 'postgres',
     port,
     user: process.env.PGUSER || 'postgres',
-    password: () => signer.getAuthToken(),
+    password: passwordOption,
     ssl,
     max: 20,
     idleTimeoutMillis: 30_000,
