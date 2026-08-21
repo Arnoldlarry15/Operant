@@ -85,11 +85,7 @@ function toAppUser(attributes: AttributeType[] | undefined): CognitoAppUser | nu
 }
 
 function cookieOptions(maxAge?: number) {
-  const isProd = process.env.NODE_ENV === 'production'
-  const isHttps =
-    process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') ||
-    process.env.NEXT_PUBLIC_SITE_URL?.startsWith('https://')
-  const secure = Boolean(isProd && isHttps && !process.env.NEXT_PUBLIC_APP_URL?.includes('localhost'))
+  const secure = Boolean(process.env.VERCEL && process.env.NODE_ENV === 'production')
 
   return {
     httpOnly: true,

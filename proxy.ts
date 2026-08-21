@@ -11,7 +11,11 @@ export function proxy(request: NextRequest) {
   const isProtected = protectedPrefixes.some((prefix) => pathname.startsWith(prefix))
   if (!isProtected) return NextResponse.next()
 
-  const hasSession = Boolean(request.cookies.get('operant_access_token')?.value)
+  const hasSession = Boolean(
+    request.cookies.get('operant_access_token')?.value ||
+      request.cookies.get('operant_refresh_token')?.value ||
+      request.cookies.get('operant_id_token')?.value,
+  )
   if (hasSession) return NextResponse.next()
 
   if (pathname.startsWith('/api/')) {

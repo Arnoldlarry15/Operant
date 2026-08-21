@@ -32,7 +32,13 @@ const checkoutItemSchema = z.object({
   }).strict().optional(),
 }).strict()
 
-const checkoutCartSchema = z.array(checkoutItemSchema).min(1).max(25)
+const checkoutCartSchema = z.union([
+  z.array(checkoutItemSchema).min(1).max(25),
+  z.object({
+    items: z.array(checkoutItemSchema).min(1).max(25),
+    userEmail: z.string().trim().max(160).optional(),
+  }),
+])
 
 function canonicalizeCartItem(item: CheckoutCartItem): CanonicalCheckoutCartItem | null {
   if (item.type === 'prebuilt') {
@@ -121,13 +127,18 @@ function canonicalizeCartItem(item: CheckoutCartItem): CanonicalCheckoutCartItem
  */
 export async function startCheckoutSession(input: unknown): Promise<CheckoutSessionPayload> {
   try {
-    const user = await getCurrentUser()
-    if (!user) throw new Error('Not authenticated')
-
     const parsed = checkoutCartSchema.safeParse(input)
     if (!parsed.success) throw new Error('Invalid checkout cart')
 
-    const items = parsed.data as CheckoutCartItem[]
+    const items = Array.isArray(parsed.data) ? parsed.data : parsed.data.items
+    const userEmailArg = Array.isArray(parsed.data) ? undefined : parsed.data.userEmail
+
+    let user = await getCurrentUser().catch(() => null)
+    if (!user && userEmailArg) {
+      user = await ensureUser(userEmailArg, userEmailArg.split('@')[0]).catch(() => null)
+    }
+
+    if (!user) throw new Error('Not authenticated')
 
     if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
 

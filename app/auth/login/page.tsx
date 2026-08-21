@@ -46,6 +46,9 @@ function LoginForm() {
       return
     }
 
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('operant_user_email', email)
+    }
     await refreshProfile()
     toast.success('Welcome back! Signing you in...')
     window.location.href = searchParams.get('next') ?? '/'

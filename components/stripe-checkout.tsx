@@ -7,6 +7,7 @@ import { AlertCircle, Loader2, CheckCircle, ArrowRight, Download, RefreshCw } fr
 import { Button } from '@/components/ui/button'
 import { startCheckoutSession, fulfillOrder } from '@/lib/stripe-actions'
 import { useAppState } from '@/lib/app-state'
+import { useAuth } from '@/components/auth-provider'
 import type { CheckoutCartItem } from '@/lib/checkout-types'
 
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -41,17 +42,19 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   const [checkoutAttempt, setCheckoutAttempt] = useState(0)
   const sessionIdRef = useRef<string | null>(null)
   const { clearCart } = useAppState()
+  const { user } = useAuth()
 
   
   const fetchClientSecret = useCallback(
     async () => {
       setCheckoutError(null)
       try {
+        const userEmail = user?.email ?? (typeof window !== 'undefined' ? localStorage.getItem('operant_user_email') : undefined)
         const res = await fetch('/api/checkout/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ items }),
+          body: JSON.stringify({ items, userEmail }),
         })
 
         const data = await res.json().catch(() => null)
