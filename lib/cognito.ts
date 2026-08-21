@@ -236,9 +236,23 @@ export async function getCognitoUserFromAccessToken(accessToken: string): Promis
 export async function getCognitoUserFromCookies(): Promise<CognitoAppUser | null> {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get(authCookieNames.access)?.value
-  if (!accessToken) return null
 
-  return getCognitoUserFromAccessToken(accessToken)
+  if (accessToken) {
+    const user = await getCognitoUserFromAccessToken(accessToken)
+    if (user) return user
+  }
+
+  try {
+    const refreshed = await refreshCognitoSession()
+    if (refreshed?.AccessToken) {
+      const user = await getCognitoUserFromAccessToken(refreshed.AccessToken)
+      if (user) return user
+    }
+  } catch (err) {
+    console.error('[getCognitoUserFromCookies] Refresh session fallback error:', err)
+  }
+
+  return null
 }
 
 export function hasCognitoConfig(): boolean {

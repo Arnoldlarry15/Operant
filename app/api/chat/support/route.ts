@@ -37,8 +37,8 @@ Important boundaries:
 
 export async function POST(req: Request) {
   try {
-    const user = await getCurrentUser()
-    if (!user) return new Response('Unauthorized', { status: 401 })
+    const user = await getCurrentUser().catch(() => null)
+    const userId = user?.id ?? 'guest'
 
     if (!hasAiGatewayAuth()) {
       return Response.json(
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
       )
     }
 
-    captureServerEvent(user.id, 'support_chat_started', {
+    captureServerEvent(userId, 'support_chat_started', {
       messageCount: parsed.data.messages.length,
     })
 
