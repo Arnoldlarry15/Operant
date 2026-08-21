@@ -12,8 +12,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const companions = await listCompanions(user.id)
-    return NextResponse.json({ companions })
+    try {
+      const companions = await listCompanions(user.id)
+      return NextResponse.json({ companions })
+    } catch (err) {
+      console.warn('[GET /api/companions] Database query fallback:', err)
+      return NextResponse.json({ companions: [] })
+    }
   } catch (err) {
     console.error('[GET /api/companions]', err)
     return NextResponse.json({ error: 'Failed to load agents' }, { status: 500 })
