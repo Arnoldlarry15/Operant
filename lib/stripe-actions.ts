@@ -32,7 +32,7 @@ const checkoutItemSchema = z.object({
   }).strict().optional(),
 }).strict()
 
-const checkoutCartSchema = z.array(checkoutItemSchema).min(1).max(25)
+const checkoutCartSchema = z.array(checkoutItemSchema).min(1).max(25).strict()
 
 function canonicalizeCartItem(item: CheckoutCartItem): CanonicalCheckoutCartItem | null {
   if (item.type === 'prebuilt') {

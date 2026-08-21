@@ -180,12 +180,13 @@ export async function signUpWithCognito(input: {
   )
 }
 
-function extractUsernameFromIdToken(idToken: string): string | null {
+function extractUsernameFromToken(token?: string | null): string | null {
+  if (!token) return null
   try {
-    const parts = idToken.split('.')
+    const parts = token.split('.')
     if (parts.length !== 3) return null
     const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'))
-    return decoded.email ?? decoded['cognito:username'] ?? decoded.cognito_username ?? null
+    return decoded.email ?? decoded['cognito:username'] ?? decoded.username ?? decoded.cognito_username ?? decoded.sub ?? null
   } catch {
     return null
   }
@@ -195,12 +196,13 @@ export async function refreshCognitoSession(): Promise<AuthenticationResultType 
   const cookieStore = await cookies()
   const refreshToken = cookieStore.get(authCookieNames.refresh)?.value
   const idToken = cookieStore.get(authCookieNames.id)?.value
+  const accessToken = cookieStore.get(authCookieNames.access)?.value
   if (!refreshToken) return null
 
   let secretHash: string | undefined
   const clientSecret = process.env.COGNITO_USER_POOL_CLIENT_SECRET
-  if (clientSecret && idToken) {
-    const username = extractUsernameFromIdToken(idToken)
+  if (clientSecret) {
+    const username = extractUsernameFromToken(idToken) ?? extractUsernameFromToken(accessToken)
     if (username) {
       secretHash = crypto
         .createHmac('sha256', clientSecret)
@@ -209,18 +211,35 @@ export async function refreshCognitoSession(): Promise<AuthenticationResultType 
     }
   }
 
-  const result = await getCognitoClient().send(
-    new InitiateAuthCommand({
-      AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: getUserPoolClientId(),
-      AuthParameters: {
-        REFRESH_TOKEN: refreshToken,
-        ...(secretHash ? { SECRET_HASH: secretHash } : {}),
-      },
-    }),
-  )
+  try {
+    const result = await getCognitoClient().send(
+      new InitiateAuthCommand({
+        AuthFlow: 'REFRESH_TOKEN_AUTH',
+        ClientId: getUserPoolClientId(),
+        AuthParameters: {
+          REFRESH_TOKEN: refreshToken,
+          ...(secretHash ? { SECRET_HASH: secretHash } : {}),
+        },
+      }),
+    )
 
-  return result.AuthenticationResult ?? null
+    const authResult = result.AuthenticationResult ?? null
+    if (authResult) {
+      try {
+        const expiresIn = authResult.ExpiresIn ?? 3600
+        const options = cookieOptions(expiresIn)
+        if (authResult.AccessToken) cookieStore.set(authCookieNames.access, authResult.AccessToken, options)
+        if (authResult.IdToken) cookieStore.set(authCookieNames.id, authResult.IdToken, options)
+        cookieStore.set(authCookieNames.expiresAt, String(Date.now() + expiresIn * 1000), options)
+      } catch {
+        // Ignore read-only contexts
+      }
+    }
+    return authResult
+  } catch (err) {
+    console.error('[refreshCognitoSession] Cognito refresh error:', err)
+    return null
+  }
 }
 
 export async function getCognitoUserFromAccessToken(accessToken: string): Promise<CognitoAppUser | null> {

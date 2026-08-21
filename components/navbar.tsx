@@ -317,7 +317,21 @@ export function Navbar() {
                   name: item.name,
                   price: item.price,
                   type: item.type,
-                  companionMeta: item.companionMeta,
+                  ...(item.companionMeta
+                    ? {
+                        companionMeta: {
+                          companion_type: item.companionMeta.companion_type ?? (item.type === 'custom' ? 'custom' : 'prebuilt'),
+                          ...(item.companionMeta.personality_id ? { personality_id: item.companionMeta.personality_id } : {}),
+                          ...(item.companionMeta.core_id ? { core_id: item.companionMeta.core_id } : {}),
+                          ...(item.companionMeta.appearance_id ? { appearance_id: item.companionMeta.appearance_id } : {}),
+                          ...(item.companionMeta.prebuilt_id ? { prebuilt_id: item.companionMeta.prebuilt_id } : {}),
+                          ...(item.companionMeta.skill_ids ? { skill_ids: item.companionMeta.skill_ids } : {}),
+                          ...(item.companionMeta.color ? { color: item.companionMeta.color } : {}),
+                          ...(item.companionMeta.emoji ? { emoji: item.companionMeta.emoji } : {}),
+                          ...(item.companionMeta.trait ? { trait: item.companionMeta.trait } : {}),
+                        },
+                      }
+                    : {}),
                 }))}
                 onSuccess={handleStripeSuccess}
                 onCancel={() => setCheckoutState('cart')}
