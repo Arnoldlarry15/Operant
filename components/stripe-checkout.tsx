@@ -47,10 +47,21 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
     async () => {
       setCheckoutError(null)
       try {
-        const session = await startCheckoutSession(items)
-        setSessionId(session.sessionId)
-        sessionIdRef.current = session.sessionId
-        return session.clientSecret
+        const res = await fetch('/api/checkout/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ items }),
+        })
+
+        const data = await res.json().catch(() => null)
+        if (!res.ok || !data?.clientSecret) {
+          throw new Error(data?.error ?? 'Checkout session could not be started.')
+        }
+
+        setSessionId(data.sessionId)
+        sessionIdRef.current = data.sessionId
+        return data.clientSecret
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Checkout could not be started.'
         setCheckoutError(message)
