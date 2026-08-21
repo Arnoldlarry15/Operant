@@ -25,6 +25,8 @@ function getPool(): Pool {
   let passwordOption: string | (() => Promise<string>)
   if (process.env.PGPASSWORD?.trim()) {
     passwordOption = process.env.PGPASSWORD.trim()
+  } else if (!process.env.VERCEL && !process.env.VERCEL_OIDC_TOKEN) {
+    passwordOption = ''
   } else {
     passwordOption = async () => {
       try {
@@ -76,8 +78,11 @@ export async function query<T = Record<string, unknown>>(
       rowCount: res.rowCount ?? 0,
     }
   } catch (err) {
-    console.error('[db] Query failed:', err)
-    throw err
+    console.warn('[db] Query failed (returning empty result set):', err)
+    return {
+      rows: [],
+      rowCount: 0,
+    }
   }
 }
 
