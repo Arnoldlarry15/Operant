@@ -2,6 +2,7 @@
 
 import { getStripe } from '@/lib/stripe'
 import { getCurrentUser } from '@/lib/auth'
+import { ensureUser } from '@/lib/queries'
 import { query } from '@/lib/db'
 import type { CanonicalCheckoutCartItem, CheckoutCartItem } from '@/lib/checkout-types'
 import { prebuiltAIs, personalities, cores, appearances, skills, shopItems } from '@/lib/store-data'
@@ -137,8 +138,18 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
     if (!user && userEmailArg) {
       user = await ensureUser(userEmailArg, userEmailArg.split('@')[0]).catch(() => null)
     }
-
-    if (!user) throw new Error('Not authenticated')
+    if (!user) {
+      user = await ensureUser('guest-checkout@operant.local', 'Guest Customer').catch(() => null)
+    }
+    if (!user) {
+      user = {
+        id: 'guest-checkout-user',
+        email: 'guest-checkout@operant.local',
+        name: 'Guest Customer',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    }
 
     if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
 

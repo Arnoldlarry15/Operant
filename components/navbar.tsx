@@ -289,7 +289,7 @@ export function Navbar() {
                     className="w-full font-bold text-sm h-11"
                     style={{ background: 'oklch(0.75 0.18 195)', color: '#000' }}
                     onClick={handleCheckout}
-                    disabled={authLoading || !user}
+                    disabled={authLoading}
                   >
                     <CheckCircle className="size-4" data-icon="inline-start" />
                     Confirm Purchase &mdash; ${total.toFixed(2)}

@@ -62,7 +62,8 @@ function toAppUser(attributes: AttributeType[] | undefined): CognitoAppUser | nu
   const email =
     getAttribute(attributes, 'email') ??
     getAttribute(attributes, 'username') ??
-    getAttribute(attributes, 'preferred_username')
+    getAttribute(attributes, 'preferred_username') ??
+    (id ? `${id}@cognito.local` : null)
   if (!id || !email) {
     console.error('[toAppUser] Missing sub or email in attributes:', attributes)
     return null
