@@ -195,7 +195,11 @@ export function Navbar() {
       {/* ── Cart / Checkout Sheet ─────────────────────────────────────── */}
       <Sheet open={cartOpen} onOpenChange={(open) => { if (!open) handleClose() }}>
         <SheetContent
-          className="w-full max-w-sm flex flex-col"
+          className={`w-full flex flex-col h-full overflow-hidden transition-all duration-300 ${
+            checkoutState === 'stripe'
+              ? 'data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl'
+              : 'data-[side=right]:sm:max-w-md'
+          }`}
           style={{ background: 'oklch(0.11 0.015 260)', borderLeft: '1px solid oklch(1 0 0 / 8%)' }}
         >
           {/* ── STATE: CART ── */}

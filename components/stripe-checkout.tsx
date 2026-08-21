@@ -178,8 +178,8 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-4">
         <EmbeddedCheckoutProvider
           key={checkoutAttempt}
           stripe={stripePromise}
@@ -191,7 +191,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
           <EmbeddedCheckout />
         </EmbeddedCheckoutProvider>
       </div>
-      <div className="pt-3 border-t border-border">
+      <div className="pt-3 border-t border-border flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
