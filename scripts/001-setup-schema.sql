@@ -113,6 +113,13 @@ CREATE TABLE IF NOT EXISTS user_milestones (
 
 CREATE INDEX IF NOT EXISTS idx_user_milestones_user ON user_milestones(user_id);
 
+-- ---------- Distributed rate limits ----------
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key       VARCHAR(255) PRIMARY KEY,
+  count     INT NOT NULL DEFAULT 1,
+  reset_at  TIMESTAMPTZ NOT NULL
+);
+
 -- ---------- updated_at trigger ----------
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$

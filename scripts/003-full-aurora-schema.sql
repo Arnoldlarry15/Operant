@@ -101,6 +101,12 @@ CREATE TABLE IF NOT EXISTS user_milestones (
 
 CREATE INDEX IF NOT EXISTS idx_user_milestones_user ON user_milestones(user_id);
 
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key       VARCHAR(255) PRIMARY KEY,
+  count     INT NOT NULL DEFAULT 1,
+  reset_at  TIMESTAMPTZ NOT NULL
+);
+
 CREATE OR REPLACE FUNCTION increment_companion_xp(
   p_companion_id UUID,
   p_user_id      UUID,

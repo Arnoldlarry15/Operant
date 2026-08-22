@@ -335,8 +335,8 @@ if (!/DEFAULT_AGENT_MODEL/.test(agentModels) || !/model:\s*DEFAULT_AGENT_MODEL/.
   failures.push('Paid agent model selection must be server-owned, not controlled by cart metadata')
 }
 
-if (!/hasAiGatewayAuth/.test(aiRuntime) || !/resolveAgentModel/.test(aiRuntime) || !/hasAiGatewayAuth\(\)/.test(chatRoute) || !/resolveAgentModel\(companion\.model\)/.test(chatRoute) || !/hasAiGatewayAuth\(\)/.test(supportChatRoute)) {
-  failures.push('Hosted chat must verify AI Gateway auth and sanitize stored model slugs before model calls')
+if (!/hasAiGatewayAuth/.test(aiRuntime) || !/resolveAgentModel/.test(aiRuntime) || !/ALLOWED_MODELS/.test(aiRuntime) || !/hasAiGatewayAuth\(\)/.test(chatRoute) || !/resolveAgentModel\(companion\.model\)/.test(chatRoute) || !/hasAiGatewayAuth\(\)/.test(supportChatRoute) || !/checkRateLimit/.test(supportChatRoute)) {
+  failures.push('Hosted chat must verify AI Gateway auth, enforce model slug whitelisting, and rate-limit support requests')
 }
 
 if (chatRoute.indexOf('hasAiGatewayAuth()') > chatRoute.indexOf("saveMessage(user.id, companionId, 'user', message)")) {

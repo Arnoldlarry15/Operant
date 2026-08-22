@@ -1,5 +1,13 @@
 import 'server-only'
-import { DEFAULT_AGENT_MODEL } from '@/lib/agent-models'
+import { DEFAULT_AGENT_MODEL, GROQ_AGENT_MODEL } from '@/lib/agent-models'
+
+const ALLOWED_MODELS = new Set([
+  DEFAULT_AGENT_MODEL,
+  GROQ_AGENT_MODEL,
+  'google/gemini-2.5-pro',
+  'google/gemini-1.5-flash',
+  'google/gemini-1.5-pro',
+])
 
 const GATEWAY_MODEL_RE = /^[a-z0-9][a-z0-9-]*\/[a-z0-9][a-z0-9._-]*$/i
 
@@ -13,9 +21,11 @@ export function hasAiGatewayAuth(): boolean {
   )
 }
 
-
 export function resolveAgentModel(model: string | null | undefined): string {
   const candidate = model?.trim()
-  if (!candidate || !GATEWAY_MODEL_RE.test(candidate)) return DEFAULT_AGENT_MODEL
+  if (!candidate || !GATEWAY_MODEL_RE.test(candidate) || !ALLOWED_MODELS.has(candidate)) {
+    return DEFAULT_AGENT_MODEL
+  }
   return candidate
 }
+
