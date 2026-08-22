@@ -1,6 +1,7 @@
 import { query } from '@/lib/db'
 import { assertAgentAssetsBucketReachable } from '@/lib/s3'
 import { getSecretValue } from '@/lib/secrets'
+import { getStripeConfig } from '@/lib/stripe-config'
 
 type ReadinessCheck = {
   name: string
@@ -22,6 +23,17 @@ function check(name: string, ok: boolean, detail?: string): ReadinessCheck {
 }
 
 export function getConfigurationReadiness(): ReadinessReport {
+  let stripeOk = false
+  let stripeDetail = 'Stripe is configured.'
+  try {
+    const stripeConfig = getStripeConfig()
+    stripeOk = Boolean(stripeConfig.secretKey && stripeConfig.publishableKey && stripeConfig.webhookSecret)
+    stripeDetail = `Stripe configured in ${stripeConfig.mode.toUpperCase()} mode.`
+  } catch (err) {
+    stripeOk = false
+    stripeDetail = err instanceof Error ? err.message : 'Stripe configuration error.'
+  }
+
   const checks: ReadinessCheck[] = [
     check('cognito_user_pool_id', hasEnv('COGNITO_USER_POOL_ID'), 'Required for AWS Cognito authentication.'),
     check('cognito_user_pool_client_id', hasEnv('COGNITO_USER_POOL_CLIENT_ID'), 'Required for AWS Cognito authentication.'),
@@ -35,9 +47,7 @@ export function getConfigurationReadiness(): ReadinessReport {
     check('s3_agent_assets_bucket', hasEnv('AGENT_ASSETS_BUCKET'), 'Required for agent files, images, and assets in S3.'),
     check('posthog_key', hasEnv('NEXT_PUBLIC_POSTHOG_KEY'), 'Required for PostHog analytics, feature flags, errors, and telemetry.'),
     check('posthog_host', hasEnv('NEXT_PUBLIC_POSTHOG_HOST'), 'Required for PostHog ingestion.'),
-    check('stripe_publishable_key', hasEnv('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'), 'Required for embedded Checkout.'),
-    check('stripe_secret_key', hasEnv('STRIPE_SECRET_KEY'), 'Required for server-side Checkout and fulfillment.'),
-    check('stripe_webhook_secret', hasEnv('STRIPE_WEBHOOK_SECRET'), 'Required to verify Stripe webhook signatures.'),
+    check('stripe_configuration', stripeOk, stripeDetail),
     check('ai_gateway_auth', hasEnv('AI_GATEWAY_API_KEY') || hasEnv('VERCEL_OIDC_TOKEN') || hasEnv('GOOGLE_GENERATIVE_AI_API_KEY') || hasEnv('GEMINI_API_KEY') || hasEnv('GROQ_API_KEY'), 'Required for AI Gateway, Gemini, or Groq chat generation.'),
     check('app_url', hasEnv('NEXT_PUBLIC_APP_URL') || hasEnv('NEXT_PUBLIC_SITE_URL'), 'Required for Stripe return URLs and auth redirects.'),
     check('readiness_token', hasEnv('READINESS_TOKEN'), 'Required to protect the readiness endpoint.'),

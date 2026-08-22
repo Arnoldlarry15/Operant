@@ -1,17 +1,14 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
-import { loadStripe } from '@stripe/stripe-js'
+import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { AlertCircle, Loader2, CheckCircle, ArrowRight, Download, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { startCheckoutSession, fulfillOrder } from '@/lib/stripe-actions'
+import { startCheckoutSession, fulfillOrder, getStripePublishableKeyAction } from '@/lib/stripe-actions'
 import { useAppState } from '@/lib/app-state'
 import { useAuth } from '@/components/auth-provider'
 import type { CheckoutCartItem } from '@/lib/checkout-types'
-
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
 
 type PurchasedCompanion = {
   id: string
@@ -40,9 +37,36 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [fulfillmentError, setFulfillmentError] = useState<string | null>(null)
   const [checkoutAttempt, setCheckoutAttempt] = useState(0)
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
+  const [keyLoading, setKeyLoading] = useState(true)
   const sessionIdRef = useRef<string | null>(null)
   const { clearCart } = useAppState()
   const { user } = useAuth()
+
+  useEffect(() => {
+    let isMounted = true
+    setKeyLoading(true)
+    getStripePublishableKeyAction()
+      .then((key) => {
+        if (!isMounted) return
+        if (key) {
+          setStripePromise(loadStripe(key))
+        } else {
+          setCheckoutError('Stripe publishable key is missing.')
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return
+        setCheckoutError(err instanceof Error ? err.message : 'Checkout configuration error')
+      })
+      .finally(() => {
+        if (isMounted) setKeyLoading(false)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [checkoutAttempt])
+
 
   
   const fetchClientSecret = useCallback(
@@ -100,7 +124,24 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
     }
   }, [clearCart, onSuccess, sessionId])
 
-  if (!stripePublishableKey || !stripePromise) {
+  if (keyLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center px-4 py-12">
+        <div
+          className="size-20 rounded-full flex items-center justify-center"
+          style={{ background: 'oklch(0.75 0.18 195 / 15%)', border: '2px solid oklch(0.75 0.18 195 / 30%)' }}
+        >
+          <Loader2 className="size-9 animate-spin" style={{ color: 'oklch(0.75 0.18 195)' }} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="font-heading font-bold text-xl">Initializing payment...</p>
+          <p className="text-muted-foreground text-sm">Connecting securely to Stripe...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!stripePromise) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-4 py-12">
         <div className="flex flex-col gap-1">

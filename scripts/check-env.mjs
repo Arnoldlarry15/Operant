@@ -6,37 +6,6 @@ const root = process.cwd()
 const files = ['.env.local']
 const placeholders = /your-|replace-with|\.\.\.|placeholder/i
 
-const required = [
-  ['Cognito Auth', [
-    { label: 'COGNITO_USER_POOL_ID', names: ['COGNITO_USER_POOL_ID'] },
-    { label: 'COGNITO_USER_POOL_CLIENT_ID', names: ['COGNITO_USER_POOL_CLIENT_ID'] },
-    { label: 'COGNITO_USER_POOL_CLIENT_SECRET (optional)', names: ['COGNITO_USER_POOL_CLIENT_SECRET'], optional: true },
-  ]],
-  ['AWS Secrets Manager', [
-    { label: 'AWS_SECRETS_MANAGER_CONFIG_SECRET_ID', names: ['AWS_SECRETS_MANAGER_CONFIG_SECRET_ID'] },
-  ]],
-  ['AWS S3', [
-    { label: 'AGENT_ASSETS_BUCKET', names: ['AGENT_ASSETS_BUCKET'] },
-  ]],
-  ['PostHog', [
-    { label: 'NEXT_PUBLIC_POSTHOG_KEY', names: ['NEXT_PUBLIC_POSTHOG_KEY'] },
-    { label: 'NEXT_PUBLIC_POSTHOG_HOST', names: ['NEXT_PUBLIC_POSTHOG_HOST'] },
-  ]],
-  ['Stripe', [
-    { label: 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', names: ['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'] },
-    { label: 'STRIPE_SECRET_KEY', names: ['STRIPE_SECRET_KEY'] },
-    { label: 'STRIPE_WEBHOOK_SECRET', names: ['STRIPE_WEBHOOK_SECRET'] },
-  ]],
-  ['AI', [
-    { label: 'AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN', names: ['AI_GATEWAY_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'VERCEL_OIDC_TOKEN'] },
-  ]],
-  ['App', [
-    { label: 'NEXT_PUBLIC_APP_URL or NEXT_PUBLIC_SITE_URL', names: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'] },
-    { label: 'READINESS_TOKEN', names: ['READINESS_TOKEN'] },
-    { label: 'SETUP_TOKEN', names: ['SETUP_TOKEN'] },
-  ]],
-]
-
 function loadEnvFiles() {
   const values = new Map()
 
@@ -60,6 +29,49 @@ function loadEnvFiles() {
 }
 
 const values = loadEnvFiles()
+const stripeMode = (values.get('STRIPE_MODE') || 'test').trim().toLowerCase()
+const isLiveMode = stripeMode === 'live'
+
+const required = [
+  ['Cognito Auth', [
+    { label: 'COGNITO_USER_POOL_ID', names: ['COGNITO_USER_POOL_ID'] },
+    { label: 'COGNITO_USER_POOL_CLIENT_ID', names: ['COGNITO_USER_POOL_CLIENT_ID'] },
+    { label: 'COGNITO_USER_POOL_CLIENT_SECRET (optional)', names: ['COGNITO_USER_POOL_CLIENT_SECRET'], optional: true },
+  ]],
+  ['AWS Secrets Manager', [
+    { label: 'AWS_SECRETS_MANAGER_CONFIG_SECRET_ID', names: ['AWS_SECRETS_MANAGER_CONFIG_SECRET_ID'] },
+  ]],
+  ['AWS S3', [
+    { label: 'AGENT_ASSETS_BUCKET', names: ['AGENT_ASSETS_BUCKET'] },
+  ]],
+  ['PostHog', [
+    { label: 'NEXT_PUBLIC_POSTHOG_KEY', names: ['NEXT_PUBLIC_POSTHOG_KEY'] },
+    { label: 'NEXT_PUBLIC_POSTHOG_HOST', names: ['NEXT_PUBLIC_POSTHOG_HOST'] },
+  ]],
+  ['Stripe', [
+    { label: 'STRIPE_MODE', names: ['STRIPE_MODE'], validate: (v) => v === 'test' || v === 'live' },
+    ...(isLiveMode
+      ? [
+          { label: 'STRIPE_LIVE_SECRET_KEY', names: ['STRIPE_LIVE_SECRET_KEY'], validate: (v) => v.startsWith('sk_live_') },
+          { label: 'NEXT_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY', names: ['NEXT_PUBLIC_STRIPE_LIVE_PUBLISHABLE_KEY'], validate: (v) => v.startsWith('pk_live_') },
+          { label: 'STRIPE_LIVE_WEBHOOK_SECRET', names: ['STRIPE_LIVE_WEBHOOK_SECRET'], validate: (v) => v.startsWith('whsec_') },
+        ]
+      : [
+          { label: 'STRIPE_TEST_SECRET_KEY', names: ['STRIPE_TEST_SECRET_KEY'], validate: (v) => v.startsWith('sk_test_') },
+          { label: 'NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY', names: ['NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY'], validate: (v) => v.startsWith('pk_test_') },
+          { label: 'STRIPE_TEST_WEBHOOK_SECRET', names: ['STRIPE_TEST_WEBHOOK_SECRET'], validate: (v) => v.startsWith('whsec_') },
+        ]),
+  ]],
+  ['AI', [
+    { label: 'AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN', names: ['AI_GATEWAY_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GEMINI_API_KEY', 'GROQ_API_KEY', 'VERCEL_OIDC_TOKEN'] },
+  ]],
+  ['App', [
+    { label: 'NEXT_PUBLIC_APP_URL or NEXT_PUBLIC_SITE_URL', names: ['NEXT_PUBLIC_APP_URL', 'NEXT_PUBLIC_SITE_URL'] },
+    { label: 'READINESS_TOKEN', names: ['READINESS_TOKEN'] },
+    { label: 'SETUP_TOKEN', names: ['SETUP_TOKEN'] },
+  ]],
+]
+
 let ok = true
 let trackedDotEnv = false
 const localDotEnvExists = existsSync(join(root, '.env'))

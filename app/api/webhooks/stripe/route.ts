@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getStripe } from '@/lib/stripe'
+import { getStripe, getStripeWebhookSecret } from '@/lib/stripe'
 import { fulfillCheckoutSession } from '@/lib/fulfill-order'
 import { updateOrderStatusByStripeSession } from '@/lib/queries'
 import { captureServerEvent } from '@/lib/posthog'
@@ -53,10 +53,11 @@ async function markRefundedOrderFromCharge(charge: Stripe.Charge): Promise<void>
 }
 
 export async function POST(req: NextRequest) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-
-  if (!webhookSecret) {
-    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set')
+  let webhookSecret: string
+  try {
+    webhookSecret = getStripeWebhookSecret()
+  } catch (err) {
+    console.error('[stripe-webhook] Webhook secret configuration error:', err)
     return new Response('Webhook secret not configured', { status: 500 })
   }
 

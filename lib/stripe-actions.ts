@@ -151,8 +151,6 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
       }
     }
 
-    if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not configured')
-
     const stripe = getStripe()
 
     // Include both auth user id and email so the webhook can resolve the Aurora user row without a session cookie.
@@ -259,3 +257,12 @@ export async function fulfillOrder(sessionId: string) {
   })
   return { success: true, companions: result.companions, upgrades: result.upgrades }
 }
+
+/**
+ * Returns the environment-appropriate Stripe publishable key for client-side Checkout initialization.
+ */
+export async function getStripePublishableKeyAction(): Promise<string> {
+  const { getStripePublishableKey } = await import('@/lib/stripe-config')
+  return getStripePublishableKey()
+}
+

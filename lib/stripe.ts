@@ -1,17 +1,28 @@
 import 'server-only'
 import Stripe from 'stripe'
+import { getStripeSecretKey } from './stripe-config'
 
 let stripeClient: Stripe | null = null
+let currentSecretKey: string | null = null
 
 export function getStripe(): Stripe {
-  const stripeKey = process.env.STRIPE_SECRET_KEY
-  if (!stripeKey) {
-    throw new Error('STRIPE_SECRET_KEY is not configured')
-  }
+  const secretKey = getStripeSecretKey()
 
-  stripeClient ??= new Stripe(stripeKey, {
-    apiVersion: '2026-05-27.dahlia',
-  })
+  if (!stripeClient || currentSecretKey !== secretKey) {
+    stripeClient = new Stripe(secretKey, {
+      apiVersion: '2026-05-27.dahlia',
+    })
+    currentSecretKey = secretKey
+  }
 
   return stripeClient
 }
+
+export {
+  getStripeConfig,
+  getStripePublishableKey,
+  getStripeSecretKey,
+  getStripeWebhookSecret,
+  getStripeMode,
+} from './stripe-config'
+

@@ -136,7 +136,7 @@ assertFileContains(
 assertFileContains(
   'lib/readiness.ts',
   'Readiness checks must cover required production service configuration',
-  /COGNITO_USER_POOL_ID[\s\S]*COGNITO_USER_POOL_CLIENT_ID[\s\S]*PGHOST[\s\S]*AWS_SECRETS_MANAGER_CONFIG_SECRET_ID[\s\S]*AGENT_ASSETS_BUCKET[\s\S]*NEXT_PUBLIC_POSTHOG_KEY[\s\S]*STRIPE_SECRET_KEY[\s\S]*STRIPE_WEBHOOK_SECRET[\s\S]*AI_GATEWAY_API_KEY[\s\S]*SETUP_TOKEN/,
+  /COGNITO_USER_POOL_ID[\s\S]*COGNITO_USER_POOL_CLIENT_ID[\s\S]*PGHOST[\s\S]*AWS_SECRETS_MANAGER_CONFIG_SECRET_ID[\s\S]*AGENT_ASSETS_BUCKET[\s\S]*NEXT_PUBLIC_POSTHOG_KEY[\s\S]*stripe_configuration[\s\S]*AI_GATEWAY_API_KEY[\s\S]*SETUP_TOKEN/,
 )
 
 assertFileContains(

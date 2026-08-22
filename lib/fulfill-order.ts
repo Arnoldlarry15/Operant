@@ -1,5 +1,5 @@
 import 'server-only'
-import { getStripe } from '@/lib/stripe'
+import { getStripe, getStripeSecretKey } from '@/lib/stripe'
 import { ensureUser } from '@/lib/queries'
 import { query, withTransaction } from '@/lib/db'
 import type { PoolClient } from 'pg'
@@ -325,8 +325,10 @@ export async function fulfillCheckoutSession(
   sessionId: string,
   options: FulfillOptions = {},
 ): Promise<FulfillResult> {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return { success: false, error: 'STRIPE_SECRET_KEY is not configured' }
+  try {
+    getStripeSecretKey()
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Stripe secret key is not configured' }
   }
 
   const stripe = getStripe()
