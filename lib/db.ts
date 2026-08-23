@@ -25,8 +25,6 @@ function getPool(): Pool {
   let passwordOption: string | (() => Promise<string>)
   if (process.env.PGPASSWORD?.trim()) {
     passwordOption = process.env.PGPASSWORD.trim()
-  } else if (!process.env.VERCEL && !process.env.VERCEL_OIDC_TOKEN) {
-    passwordOption = ''
   } else {
     passwordOption = async () => {
       try {
@@ -39,7 +37,7 @@ function getPool(): Pool {
         })
         return await signer.getAuthToken()
       } catch (err) {
-        console.warn('[db] AWS IAM RDS Signer failed (using local fallback):', err)
+        console.warn('[db] AWS IAM RDS Signer failed:', err)
         return process.env.PGPASSWORD || ''
       }
     }
@@ -78,11 +76,8 @@ export async function query<T = Record<string, unknown>>(
       rowCount: res.rowCount ?? 0,
     }
   } catch (err) {
-    console.warn('[db] Query failed (returning empty result set):', err)
-    return {
-      rows: [],
-      rowCount: 0,
-    }
+    console.error('[db] Query execution failed:', err)
+    throw new Error(`Database query failed: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 

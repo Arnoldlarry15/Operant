@@ -16,7 +16,8 @@ import type { CheckoutCartItem } from './checkout-types'
  * Ensure an Aurora `users` row exists for the given external identity
  * (e.g. a Cognito auth user). Returns the Aurora user id.
  */
-export async function ensureUser(email: string, name?: string | null): Promise<UserRow> {
+export async function ensureUser(rawEmail: string, name?: string | null): Promise<UserRow> {
+  const email = rawEmail.trim().toLowerCase()
   const { rows } = await query<UserRow>(
     `INSERT INTO users (email, name)
      VALUES ($1, $2)
