@@ -10,51 +10,8 @@ import { getAwsCredentials, getAwsRegion } from '@/lib/aws'
 // ---------------------------------------------------------------------------
 const g = globalThis as unknown as { __operantPool?: Pool }
 
-let cachedRdsToken: string | null = null
-let rdsTokenExpiresAt = 0
-
-/**
- * Obtains an AWS RDS IAM auth token within the active Vercel request context.
- * Caches the generated RDS token conservatively for 10 minutes (AWS RDS IAM tokens expire in 15 mins).
- * The Vercel OIDC token itself is never cached.
- */
-async function getValidRdsIamToken(): Promise<string> {
-  const now = Date.now()
-  if (cachedRdsToken && now < rdsTokenExpiresAt) {
-    return cachedRdsToken
-  }
-
-  const signer = new Signer({
-    credentials: getAwsCredentials(),
-    region: getAwsRegion(),
-    hostname: process.env.PGHOST!,
-    username: process.env.PGUSER || 'postgres',
-    port: Number(process.env.PGPORT ?? 5432),
-  })
-
-  const token = await signer.getAuthToken()
-  cachedRdsToken = token
-  rdsTokenExpiresAt = now + 10 * 60 * 1000 // 10-minute conservative safety window
-  return token
-}
-
-/**
- * Obtains or updates the database pool using an explicitly resolved RDS IAM token string.
- * This guarantees pg.Pool receives a static string password and NEVER executes an async
- * OIDC callback outside request context.
- */
-async function getPool(): Promise<Pool> {
-  let token: string | undefined
-  if (!process.env.PGPASSWORD?.trim()) {
-    token = await getValidRdsIamToken()
-  }
-
-  if (g.__operantPool) {
-    if (token) {
-      ;(g.__operantPool.options as unknown as Record<string, unknown>).password = token
-    }
-    return g.__operantPool
-  }
+function getPool(): Pool {
+  if (g.__operantPool) return g.__operantPool
 
   const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
 
@@ -65,12 +22,33 @@ async function getPool(): Promise<Pool> {
       ? false
       : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
 
+  let passwordOption: string | (() => Promise<string>)
+  if (process.env.PGPASSWORD?.trim()) {
+    passwordOption = process.env.PGPASSWORD.trim()
+  } else {
+    passwordOption = async () => {
+      try {
+        const signer = new Signer({
+          credentials: getAwsCredentials(),
+          region: getAwsRegion(),
+          hostname: process.env.PGHOST!,
+          username: process.env.PGUSER || 'postgres',
+          port,
+        })
+        return await signer.getAuthToken()
+      } catch (err) {
+        console.warn('[db] AWS IAM RDS Signer failed:', err)
+        return process.env.PGPASSWORD || ''
+      }
+    }
+  }
+
   const pool = new Pool({
     host: process.env.PGHOST,
     database: process.env.PGDATABASE || 'postgres',
     port,
     user: process.env.PGUSER || 'postgres',
-    password: process.env.PGPASSWORD?.trim() || token,
+    password: passwordOption,
     ssl,
     max: 20,
     idleTimeoutMillis: 30_000,
@@ -92,8 +70,7 @@ export async function query<T = Record<string, unknown>>(
   params?: unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
   try {
-    const pool = await getPool()
-    const res = await pool.query(text, params)
+    const res = await getPool().query(text, params)
     return {
       rows: res.rows as T[],
       rowCount: res.rowCount ?? 0,
@@ -106,8 +83,7 @@ export async function query<T = Record<string, unknown>>(
 
 /** Multi-statement transactions. Rolls back on any thrown error. */
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const pool = await getPool()
-  const client = await pool.connect()
+  const client = await getPool().connect()
   try {
     await client.query('BEGIN')
     const result = await fn(client)
