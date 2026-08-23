@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "check:env": "node scripts/check-env.mjs",
     "test:stripe-config": "node --conditions=react-server scripts/test-stripe-config.mjs",
+    "test:checkout": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-checkout-sandbox.mjs",
+    "test:stripe": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-checkout-sandbox.mjs",
+    "test:webhook": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-webhook-unit.mjs",
     "verify:production": "node scripts/verify-production-invariants.mjs"
   },
   "dependencies": {
