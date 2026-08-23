@@ -17,16 +17,15 @@ export function getAwsCredentials() {
     }
   }
 
-  const isVercelEnvironment = Boolean(process.env.VERCEL || process.env.VERCEL_OIDC_TOKEN)
-  if (!isVercelEnvironment) {
+  const roleArn = process.env.AWS_ROLE_ARN
+  const hasOidcSupport = Boolean(process.env.VERCEL_OIDC_TOKEN)
+
+  if (!roleArn || !hasOidcSupport) {
     return {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
     }
   }
-
-  const roleArn = process.env.AWS_ROLE_ARN
-  if (!roleArn) throw new Error('AWS_ROLE_ARN is not configured')
 
   try {
     const oidcProvider = awsCredentialsProvider({
@@ -46,7 +45,7 @@ export function getAwsCredentials() {
       }
     }
   } catch (err) {
-    console.warn('[getAwsCredentials] awsCredentialsProvider construction failed (using local fallback):', err)
+    console.warn('[getAwsCredentials] awsCredentialsProvider construction failed:', err)
     return {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
