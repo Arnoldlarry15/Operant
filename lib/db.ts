@@ -1,68 +1,45 @@
 import 'server-only'
 import { Pool, type PoolClient } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
-import { getAwsCredentials, getAwsRegion } from '@/lib/aws'
+import { awsCredentialsProvider } from '@vercel/functions/oidc'
+import { attachDatabasePool } from '@vercel/functions'
 
-// ---------------------------------------------------------------------------
-// Lazy pool - created only on first actual query, not at import time.
-// This prevents crashes during Next.js static prerender / build where the
-// Vercel OIDC context and AWS env vars are not present.
-// ---------------------------------------------------------------------------
-const g = globalThis as unknown as { __operantPool?: Pool }
+const port = Number(process.env.PGPORT ?? 5432)
+const region = process.env.AWS_REGION || 'us-east-2'
+const sslMode = (process.env.PGSSLMODE ?? 'verify-full').toLowerCase()
+const ssl =
+  sslMode === 'disable'
+    ? false
+    : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
 
-function getPool(): Pool {
-  if (g.__operantPool) return g.__operantPool
+const signer = new Signer({
+  hostname: process.env.PGHOST!,
+  port,
+  username: process.env.PGUSER || 'postgres',
+  region,
+  credentials: awsCredentialsProvider({
+    roleArn: process.env.AWS_ROLE_ARN!,
+    clientConfig: { region },
+  }),
+})
 
-  const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
+const pool = new Pool({
+  host: process.env.PGHOST,
+  user: process.env.PGUSER || 'postgres',
+  database: process.env.PGDATABASE || 'postgres',
+  password: () => signer.getAuthToken(),
+  port,
+  ssl,
+  max: 20,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 30_000,
+})
 
-  const port = Number(process.env.PGPORT ?? 5432)
-  const sslMode = (process.env.PGSSLMODE ?? 'verify-full').toLowerCase()
-  const ssl =
-    sslMode === 'disable'
-      ? false
-      : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
+pool.on('error', (err) => {
+  console.error('[db] idle client error', err)
+})
 
-  let passwordOption: string | (() => Promise<string>)
-  if (process.env.PGPASSWORD?.trim()) {
-    passwordOption = process.env.PGPASSWORD.trim()
-  } else {
-    passwordOption = async () => {
-      try {
-        const signer = new Signer({
-          credentials: getAwsCredentials(),
-          region: getAwsRegion(),
-          hostname: process.env.PGHOST!,
-          username: process.env.PGUSER || 'postgres',
-          port,
-        })
-        return await signer.getAuthToken()
-      } catch (err) {
-        console.warn('[db] AWS IAM RDS Signer failed:', err)
-        return process.env.PGPASSWORD || ''
-      }
-    }
-  }
-
-  const pool = new Pool({
-    host: process.env.PGHOST,
-    database: process.env.PGDATABASE || 'postgres',
-    port,
-    user: process.env.PGUSER || 'postgres',
-    password: passwordOption,
-    ssl,
-    max: 20,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 30_000,
-  })
-
-  pool.on('error', (err) => {
-    console.error('[db] idle client error', err)
-  })
-
-  attachDatabasePool(pool)
-  g.__operantPool = pool
-  return pool
-}
+attachDatabasePool(pool)
 
 /** Single parameterized query. */
 export async function query<T = Record<string, unknown>>(
@@ -70,7 +47,7 @@ export async function query<T = Record<string, unknown>>(
   params?: unknown[],
 ): Promise<{ rows: T[]; rowCount: number }> {
   try {
-    const res = await getPool().query(text, params)
+    const res = await pool.query(text, params)
     return {
       rows: res.rows as T[],
       rowCount: res.rowCount ?? 0,
@@ -83,7 +60,7 @@ export async function query<T = Record<string, unknown>>(
 
 /** Multi-statement transactions. Rolls back on any thrown error. */
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await getPool().connect()
+  const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const result = await fn(client)

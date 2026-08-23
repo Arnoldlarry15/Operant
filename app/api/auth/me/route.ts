@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCognitoUserFromAccessToken, getCognitoUserFromCookies, refreshCognitoSession, setAuthCookies } from '@/lib/cognito'
 import { ensureUser } from '@/lib/queries'
-import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

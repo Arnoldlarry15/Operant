@@ -6,7 +6,7 @@ import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe
 import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { AlertCircle, Loader2, CheckCircle, ArrowRight, Download, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { startCheckoutSession, fulfillOrder, getStripePublishableKeyAction } from '@/lib/stripe-actions'
+import { fulfillOrder, getStripePublishableKeyAction } from '@/lib/stripe-actions'
 import { useAppState } from '@/lib/app-state'
 import { useAuth } from '@/components/auth-provider'
 import type { CheckoutCartItem } from '@/lib/checkout-types'
@@ -37,7 +37,6 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [fulfillmentError, setFulfillmentError] = useState<string | null>(null)
-  const [checkoutAttempt, setCheckoutAttempt] = useState(0)
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
   const [keyLoading, setKeyLoading] = useState(true)
   const sessionIdRef = useRef<string | null>(null)
@@ -97,7 +96,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
         throw err
       }
     },
-    [itemsJson, user?.email]
+    [itemsJson, user]
   )
 
   const handleComplete = useCallback(async () => {
