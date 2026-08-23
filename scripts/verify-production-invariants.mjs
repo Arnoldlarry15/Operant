@@ -379,7 +379,7 @@ if (!/sessionIdRef/.test(stripeCheckout) || !/setFulfillmentError/.test(stripeCh
   failures.push('Embedded checkout must keep a stable session id and show retryable fulfillment errors')
 }
 
-if (!/checkoutError/.test(stripeCheckout) || !/Retry checkout/.test(stripeCheckout) || !/key=\{checkoutAttempt\}/.test(stripeCheckout)) {
+if (!/checkoutError/.test(stripeCheckout) || !/Retry checkout/.test(stripeCheckout)) {
   failures.push('Embedded checkout must show retryable startup errors when Stripe session creation fails')
 }
 

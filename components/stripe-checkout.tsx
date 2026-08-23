@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
 import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { AlertCircle, Loader2, CheckCircle, ArrowRight, Download, RefreshCw } from 'lucide-react'
@@ -65,10 +65,10 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
     return () => {
       isMounted = false
     }
-  }, [checkoutAttempt])
+  }, [])
 
+  const itemsJson = useMemo(() => JSON.stringify(items), [items])
 
-  
   const fetchClientSecret = useCallback(
     async () => {
       setCheckoutError(null)
@@ -78,7 +78,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ items, userEmail }),
+          body: JSON.stringify({ items: JSON.parse(itemsJson), userEmail }),
         })
 
         const data = await res.json().catch(() => null)
@@ -95,8 +95,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
         throw err
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(items), checkoutAttempt]
+    [itemsJson, user?.email]
   )
 
   const handleComplete = useCallback(async () => {
@@ -232,17 +231,18 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
     )
   }
 
+  const options = useMemo(
+    () => ({
+      fetchClientSecret,
+      onComplete: handleComplete,
+    }),
+    [fetchClientSecret, handleComplete]
+  )
+
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-4">
-        <EmbeddedCheckoutProvider
-          key={checkoutAttempt}
-          stripe={stripePromise}
-          options={{
-            fetchClientSecret,
-            onComplete: handleComplete,
-          }}
-        >
+        <EmbeddedCheckoutProvider stripe={stripePromise} options={options}>
           <EmbeddedCheckout />
         </EmbeddedCheckoutProvider>
       </div>

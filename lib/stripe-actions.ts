@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { ensureUser } from '@/lib/queries'
 import { query } from '@/lib/db'
 import type { CanonicalCheckoutCartItem, CheckoutCartItem } from '@/lib/checkout-types'
+import type { UserRow } from '@/lib/types'
 import { prebuiltAIs, personalities, cores, appearances, skills, shopItems } from '@/lib/store-data'
 import { DEFAULT_AGENT_MODEL } from '@/lib/agent-models'
 import { captureServerError, captureServerEvent } from '@/lib/posthog'
@@ -134,15 +135,31 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
     const items = Array.isArray(parsed.data) ? parsed.data : parsed.data.items
     const userEmailArg = Array.isArray(parsed.data) ? undefined : parsed.data.userEmail
 
-    let user = await getCurrentUser().catch(() => null)
+    let user: UserRow | null = null
+    try {
+      user = await getCurrentUser()
+    } catch (err) {
+      console.warn('[startCheckoutSession] getCurrentUser warning:', err)
+    }
+
     if (!user && userEmailArg) {
-      user = await ensureUser(userEmailArg, userEmailArg.split('@')[0]).catch(() => null)
+      try {
+        user = await ensureUser(userEmailArg, userEmailArg.split('@')[0])
+      } catch (err) {
+        console.warn('[startCheckoutSession] ensureUser for userEmailArg warning:', err)
+      }
     }
+
     if (!user) {
-      user = await ensureUser('guest-checkout@operant.local', 'Guest Customer').catch(() => null)
+      try {
+        user = await ensureUser('guest-checkout@operant.local', 'Guest Customer')
+      } catch (err) {
+        throw new Error(`Failed to resolve Aurora user for checkout session: ${err instanceof Error ? err.message : String(err)}`)
+      }
     }
+
     if (!user || !user.id) {
-      throw new Error('Failed to resolve Aurora user for checkout session')
+      throw new Error('Failed to resolve Aurora user for checkout session (user record missing ID)')
     }
 
     const stripe = getStripe()

@@ -8,8 +8,7 @@ export async function POST(req: Request) {
   try {
     console.log('[POST /api/checkout/session] Cookie header:', req.headers.get('cookie'))
     const body = await req.json().catch(() => null)
-    const items = body?.items ?? body
-    const result = await startCheckoutSession(items)
+    const result = await startCheckoutSession(body)
     return NextResponse.json(result)
   } catch (err) {
     console.error('[POST /api/checkout/session] Error details:', err)
