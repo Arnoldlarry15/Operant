@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js'
 import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { AlertCircle, Loader2, CheckCircle, ArrowRight, Download, RefreshCw } from 'lucide-react'
@@ -42,6 +43,7 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
   const sessionIdRef = useRef<string | null>(null)
   const { clearCart } = useAppState()
   const { user } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     let isMounted = true
@@ -123,6 +125,19 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
     }
   }, [clearCart, onSuccess, sessionId])
 
+  const options = useMemo(
+    () => ({
+      fetchClientSecret,
+      onComplete: handleComplete,
+    }),
+    [fetchClientSecret, handleComplete]
+  )
+
+  const handleGoHome = useCallback(() => {
+    onCancel()
+    router.push('/')
+  }, [onCancel, router])
+
   if (keyLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center px-4 py-12">
@@ -149,9 +164,14 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
             The payment system is not properly configured. Please contact support.
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          Back to cart
-        </Button>
+        <div className="flex gap-2 w-full max-w-xs">
+          <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onCancel}>
+            Back to cart
+          </Button>
+          <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={handleGoHome}>
+            Home
+          </Button>
+        </div>
       </div>
     )
   }
@@ -191,9 +211,14 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
             <RefreshCw className="size-4" data-icon="inline-start" />
             Retry setup
           </Button>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Back to cart
-          </Button>
+          <div className="flex gap-2 w-full">
+            <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onCancel}>
+              Back to cart
+            </Button>
+            <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={handleGoHome}>
+              Home
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -217,27 +242,23 @@ export function StripeCheckout({ items, onSuccess, onCancel }: Props) {
             className="w-full font-semibold"
             onClick={() => {
               setCheckoutError(null)
-              setCheckoutAttempt((attempt) => attempt + 1)
             }}
           >
             <RefreshCw className="size-4" data-icon="inline-start" />
             Retry checkout
           </Button>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Back to cart
-          </Button>
+          <div className="flex gap-2 w-full">
+            <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={onCancel}>
+              Back to cart
+            </Button>
+            <Button variant="ghost" size="sm" className="flex-1 text-xs" onClick={handleGoHome}>
+              Home
+            </Button>
+          </div>
         </div>
       </div>
     )
   }
-
-  const options = useMemo(
-    () => ({
-      fetchClientSecret,
-      onComplete: handleComplete,
-    }),
-    [fetchClientSecret, handleComplete]
-  )
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
