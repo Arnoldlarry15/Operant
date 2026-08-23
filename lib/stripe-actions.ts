@@ -141,14 +141,8 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
     if (!user) {
       user = await ensureUser('guest-checkout@operant.local', 'Guest Customer').catch(() => null)
     }
-    if (!user) {
-      user = {
-        id: 'guest-checkout-user',
-        email: 'guest-checkout@operant.local',
-        name: 'Guest Customer',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
+    if (!user || !user.id) {
+      throw new Error('Failed to resolve Aurora user for checkout session')
     }
 
     const stripe = getStripe()

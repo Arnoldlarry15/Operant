@@ -231,6 +231,10 @@ async function writeFulfillmentTransaction(
       order = inserted.rows[0]
     }
 
+    if (!order || !order.id) {
+      throw new Error('Fulfillment order record could not be created or retrieved')
+    }
+
     const items = order.items?.length ? order.items : fallbackItems
 
     const createdAgents: FulfilledCompanion[] = []
@@ -263,6 +267,9 @@ async function writeFulfillmentTransaction(
       )
 
       const agent = rows[0]
+      if (!agent || !agent.id) {
+        throw new Error(`Failed to create companion agent record for ${input.name}`)
+      }
       for (const skillName of [...new Set(input.skills.map((skill) => skill.trim()).filter(Boolean))]) {
         await client.query(
           `INSERT INTO companion_skills (companion_id, user_id, skill_id, skill_name)
@@ -347,18 +354,22 @@ export async function fulfillCheckoutSession(
 
   const userEmail = session.customer_details?.email ?? session.metadata?.user_email
   if (!session.metadata?.user_id || !userEmail) {
-    return { success: false, error: 'Missing user_id or user_email in session metadata' }
+    return { success: false, error: 'Stripe checkout session is missing user_id or user_email in metadata' }
   }
 
   let auroraUser: { id: string }
   try {
     auroraUser = await ensureUser(userEmail)
   } catch (err) {
-    return { success: false, error: `Failed to resolve Aurora user: ${String(err)}` }
+    return { success: false, error: `Failed to resolve Aurora user: ${err instanceof Error ? err.message : String(err)}` }
+  }
+
+  if (!auroraUser || !auroraUser.id) {
+    return { success: false, error: 'Failed to resolve Aurora user ID from database' }
   }
 
   if (session.metadata.user_id !== auroraUser.id) {
-    return { success: false, error: 'Stripe session metadata does not match Aurora user' }
+    return { success: false, error: 'Stripe session user_id metadata does not match Aurora user' }
   }
 
   if (options.expectedUserId && options.expectedUserId !== auroraUser.id) {

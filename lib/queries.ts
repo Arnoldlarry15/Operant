@@ -24,7 +24,11 @@ export async function ensureUser(email: string, name?: string | null): Promise<U
      RETURNING id, email, name, created_at, updated_at`,
     [email, name ?? null],
   )
-  return rows[0]
+  const user = rows[0]
+  if (!user || !user.id) {
+    throw new Error(`Failed to resolve or create Aurora user for email: ${email}`)
+  }
+  return user
 }
 
 // ---------------------------------------------------------------------------
