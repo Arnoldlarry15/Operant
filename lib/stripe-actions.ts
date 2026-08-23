@@ -246,12 +246,11 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
  */
 export async function fulfillOrder(sessionId: string) {
   const user = await getCurrentUser()
-  if (!user) return { error: 'Not authenticated' }
 
   const { fulfillCheckoutSession } = await import('@/lib/fulfill-order')
-  const result = await fulfillCheckoutSession(sessionId, { expectedUserId: user.id })
+  const result = await fulfillCheckoutSession(sessionId, { expectedUserId: user?.id })
   if (!result.success) return { error: result.error }
-  captureServerEvent(user.id, 'checkout_fulfillment_confirmed', {
+  captureServerEvent(user?.id ?? 'anonymous', 'checkout_fulfillment_confirmed', {
     companionCount: result.companions.length,
     upgradeCount: result.upgrades.length,
   })

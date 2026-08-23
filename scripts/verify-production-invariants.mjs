@@ -371,7 +371,7 @@ if (!/session\.metadata\.user_id !== auroraUser\.id/.test(fulfillment)) {
   failures.push('Fulfillment must verify Stripe user metadata matches the resolved Aurora user')
 }
 
-if (!/fulfillCheckoutSession\(sessionId,\s*\{\s*expectedUserId:\s*user\.id\s*\}\)/.test(stripeActions)) {
+if (!/fulfillCheckoutSession\(sessionId,\s*\{\s*expectedUserId:\s*user\??\.id\s*\}\)/.test(stripeActions)) {
   failures.push('Browser fallback fulfillment must pass the authenticated Aurora user id')
 }
 
