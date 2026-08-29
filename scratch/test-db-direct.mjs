@@ -1,59 +1,88 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import pg from 'pg'
+import { Signer } from '@aws-sdk/rds-signer'
 
 const envPath = join(process.cwd(), '.env.local')
+
 if (existsSync(envPath)) {
   const lines = readFileSync(envPath, 'utf8').split(/\r?\n/)
+
   for (const line of lines) {
     const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
-    if (match) process.env[match[1]] = match[2].trim()
+
+    if (match) {
+      process.env[match[1]] = match[2].trim()
+    }
   }
 }
 
 async function test() {
-  console.log('Testing PGHOST:', process.env.PGHOST)
-  console.log('Testing PGUSER:', process.env.PGUSER)
-  console.log('Testing PGDATABASE:', process.env.PGDATABASE)
-  console.log('Testing PGPASSWORD set?:', Boolean(process.env.PGPASSWORD))
-  console.log('Testing AWS_ROLE_ARN:', process.env.AWS_ROLE_ARN)
-  console.log('Testing AWS_ACCESS_KEY_ID set?:', Boolean(process.env.AWS_ACCESS_KEY_ID))
+  const host = process.env.PGHOST
+  const database = process.env.PGDATABASE || 'postgres'
+  const username = process.env.PGUSER || 'postgres'
+  const port = Number(process.env.PGPORT || 5432)
+  const region = process.env.AWS_REGION || 'us-east-2'
+
+  console.log('Host:', host)
+  console.log('Port:', port)
+  console.log('Database:', database)
+  console.log('User:', username)
+  console.log('Region:', region)
+  console.log('PGPASSWORD set?:', Boolean(process.env.PGPASSWORD))
 
   try {
-    const { Signer } = await import('@aws-sdk/rds-signer')
     const signer = new Signer({
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      },
-      region: process.env.AWS_REGION || 'us-east-2',
-      hostname: process.env.PGHOST,
-      username: process.env.PGUSER || 'postgres',
-      port: 5432,
+      region,
+      hostname: host,
+      username,
+      port,
     })
 
-    let password = process.env.PGPASSWORD
-    if (!password) {
-      console.log('Generating RDS Signer Auth Token...')
-      password = await signer.getAuthToken()
-      console.log('RDS Signer Auth Token generated successfully!')
-    }
+    console.log('Generating fresh RDS IAM auth token...')
+
+    const token = await signer.getAuthToken()
+
+    console.log('RDS IAM auth token generated successfully.')
+    console.log('Attempting PostgreSQL connection...')
 
     const pool = new pg.Pool({
-      host: process.env.PGHOST,
-      database: process.env.PGDATABASE || 'postgres',
-      port: 5432,
-      user: process.env.PGUSER || 'postgres',
-      password,
-      ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 10000,
+      host,
+      database,
+      port,
+      user: username,
+      password: token,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+      connectionTimeoutMillis: 15000,
+      query_timeout: 15000,
     })
 
-    const res = await pool.query('SELECT 1 as test')
-    console.log('DB CONNECTION SUCCESSFUL! Result:', res.rows)
+    const result = await pool.query('SELECT 1 AS test')
+
+    console.log('========================================')
+    console.log('DB CONNECTION SUCCESSFUL')
+    console.log('Result:', result.rows)
+    console.log('========================================')
+
     await pool.end()
   } catch (err) {
-    console.error('DB CONNECTION FAILED with error:', err)
+    console.error('========================================')
+    console.error('DB CONNECTION FAILED')
+    console.error('========================================')
+
+    if (err instanceof Error) {
+      console.error('Error:', err.message)
+      console.error('Name:', err.name)
+      console.error('Code:', err.code ?? 'none')
+      console.error('Detail:', err.detail ?? 'none')
+      console.error('Hint:', err.hint ?? 'none')
+    } else {
+      console.error(err)
+    }
+
+    process.exitCode = 1
   }
 }
 
