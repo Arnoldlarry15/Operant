@@ -1,24 +1,22 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
-
-# Environment variables
-.env
-.env*.local
+﻿# Environment files
+.env*
 !.env.example
 
-# Common ignores
-node_modules
-.next/
-*.tsbuildinfo
-.DS_Store
-.vercel
-.aider*
+# Vercel environment pulls
+.env.vercel.*
+.readiness-env
 
-# Local Vercel environment snapshots
-.env.vercel.preview
-.env.vercel.production
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Local development
+*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
