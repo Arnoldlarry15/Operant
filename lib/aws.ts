@@ -1,4 +1,4 @@
-import 'server-only'
+﻿import 'server-only'
 
 import { awsCredentialsProvider } from '@vercel/functions/oidc'
 
@@ -9,46 +9,33 @@ export function getAwsRegion(): string {
 }
 
 export function getAwsCredentials() {
-  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+
+  if (accessKeyId && secretAccessKey) {
     return {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      ...(process.env.AWS_SESSION_TOKEN ? { sessionToken: process.env.AWS_SESSION_TOKEN } : {}),
+      accessKeyId,
+      secretAccessKey,
+      ...(process.env.AWS_SESSION_TOKEN
+        ? { sessionToken: process.env.AWS_SESSION_TOKEN }
+        : {}),
     }
   }
 
   const roleArn = process.env.AWS_ROLE_ARN
-  const hasOidcSupport = Boolean(process.env.VERCEL_OIDC_TOKEN)
 
-  if (!roleArn || !hasOidcSupport) {
-    return {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
-    }
+  if (!roleArn) {
+    throw new Error(
+      'AWS credentials are not configured: set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or AWS_ROLE_ARN for Vercel OIDC',
+    )
   }
 
-  try {
-    const oidcProvider = awsCredentialsProvider({
-      roleArn,
-      clientConfig: { region: getAwsRegion() },
-    })
-
-    return async () => {
-      try {
-        return await oidcProvider()
-      } catch (err) {
-        console.warn('[getAwsCredentials] OIDC token missing or provider invocation error:', err)
-        return {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[getAwsCredentials] awsCredentialsProvider construction failed:', err)
-    return {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'local',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'local',
-    }
-  }
+  return awsCredentialsProvider({
+    roleArn,
+    clientConfig: {
+      region: getAwsRegion(),
+    },
+  })
 }
+
+
