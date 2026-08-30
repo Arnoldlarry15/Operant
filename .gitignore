@@ -18,3 +18,7 @@ node_modules
 .DS_Store
 .vercel
 .aider*
+
+# Local Vercel environment snapshots
+.env.vercel.preview
+.env.vercel.production
