@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+﻿import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 const root = process.cwd()
@@ -47,6 +47,31 @@ function assertFileContains(path, description, pattern) {
 function assertFileMissing(path, description) {
   if (existsSync(join(root, path))) {
     failures.push(`${description}: ${path}`)
+  }
+}
+
+function assertGitignorePolicy() {
+  const gitignorePath = join(root, '.gitignore')
+
+  // Vercel's build filesystem does not necessarily contain repository-control
+  // files such as .gitignore. Validate the policy locally, where the file exists.
+  if (!existsSync(gitignorePath)) {
+    if (process.env.VERCEL === '1') {
+      return
+    }
+
+    failures.push(
+      'Real .env files must be ignored while .env.example remains trackable: missing .gitignore',
+    )
+    return
+  }
+
+  const text = read(gitignorePath)
+
+  if (!/\.env[\s\S]*!\.env\.example/.test(text)) {
+    failures.push(
+      'Real .env files must be ignored while .env.example remains trackable: .gitignore',
+    )
   }
 }
 
@@ -174,11 +199,7 @@ assertFileContains(
   /No secret values are printed/,
 )
 
-assertFileContains(
-  '.gitignore',
-  'Real .env files must be ignored while .env.example remains trackable',
-  /\.env[\s\S]*!\.env\.example/,
-)
+assertGitignorePolicy()
 
 assertFileContains(
   'scripts/check-env.mjs',
@@ -267,6 +288,7 @@ const agentModels = read(join(root, 'lib/agent-models.ts'))
 const aiRuntime = read(join(root, 'lib/ai-runtime.ts'))
 const orderInsertIndex = fulfillment.indexOf('INSERT INTO orders')
 const agentInsertIndex = fulfillment.indexOf('INSERT INTO companions')
+
 if (orderInsertIndex === -1 || agentInsertIndex === -1 || orderInsertIndex > agentInsertIndex) {
   failures.push('Fulfillment must insert the idempotent order before creating agents')
 }
@@ -351,6 +373,7 @@ const types = read(join(root, 'lib/types.ts'))
 const checkoutTypes = read(join(root, 'lib/checkout-types.ts'))
 const publicCheckoutItemType = checkoutTypes.match(/export type CheckoutCartItem =[\s\S]*?\n}/)?.[0] ?? ''
 const publicCompanionMetaType = checkoutTypes.match(/export type CheckoutCartItemCompanionMeta =[\s\S]*?\n}/)?.[0] ?? ''
+
 if (/model\?:/.test(publicCheckoutItemType + publicCompanionMetaType) || /model:\s*z\.string/.test(types) || /companionMeta\?\.model|meta\.model/.test(stripeActions + fulfillment)) {
   failures.push('Checkout and fulfillment must not accept client-submitted agent model metadata')
 }
@@ -401,6 +424,7 @@ if (!/DAILY_AGENT_MESSAGE_LIMIT/.test(chatRoute) || !/countUserMessagesSince/.te
 
 const assistantSaveIndex = chatRoute.indexOf("saveMessage(user.id, companionId, 'assistant', text)")
 const xpAwardIndex = chatRoute.indexOf('addCompanionXP(user.id, companionId, 8)')
+
 if (assistantSaveIndex === -1 || xpAwardIndex === -1 || xpAwardIndex < assistantSaveIndex) {
   failures.push('Paid chat must award XP only after saving a successful assistant response')
 }
@@ -462,6 +486,7 @@ if (!/Paid upgrade item could not be resolved from catalog/.test(fulfillment)) {
 }
 
 const queries = read(join(root, 'lib/queries.ts'))
+
 if (!/export async function updateOrderStatusByStripeSession/.test(queries) || !/\$3::boolean OR status <> 'completed'/.test(queries)) {
   failures.push('Order status updates must preserve completed fulfillment rows')
 }
