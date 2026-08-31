@@ -20,3 +20,14 @@ out/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Local AI coding tool state
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# Vercel local project settings
+.vercel/
+
+# TypeScript build cache
+*.tsbuildinfo
