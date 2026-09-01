@@ -163,18 +163,27 @@ export async function signUpWithCognito(input: {
   displayName: string
 }): Promise<void> {
   const secretHash = getSecretHash(input.email)
-  await getCognitoClient().send(
-    new SignUpCommand({
-      ClientId: getUserPoolClientId(),
-      Username: input.email,
-      Password: input.password,
-      UserAttributes: [
-        { Name: 'email', Value: input.email },
-        { Name: 'name', Value: input.displayName },
-      ],
-      ...(secretHash ? { SecretHash: secretHash } : {}),
-    }),
-  )
+
+  try {
+    await getCognitoClient().send(
+      new SignUpCommand({
+        ClientId: getUserPoolClientId(),
+        Username: input.email,
+        Password: input.password,
+        UserAttributes: [
+          { Name: 'email', Value: input.email },
+          { Name: 'name', Value: input.displayName },
+        ],
+        ...(secretHash ? { SecretHash: secretHash } : {}),
+      }),
+    )
+  } catch (err) {
+    console.error('[cognito-sign-up] Failed:', {
+      name: err instanceof Error ? err.name : typeof err,
+      message: err instanceof Error ? err.message : String(err),
+    })
+    throw err
+  }
 }
 
 function extractUsernameFromToken(token?: string | null): string | null {

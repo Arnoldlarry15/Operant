@@ -13,8 +13,19 @@ const signUpSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const parsed = signUpSchema.safeParse(await req.json().catch(() => null))
+  let body: unknown
+
+  try {
+    body = await req.json()
+  } catch (err) {
+    console.error('[sign-up] Request JSON parse failed:', err)
+    return NextResponse.json({ error: 'Invalid account details' }, { status: 400 })
+  }
+
+  const parsed = signUpSchema.safeParse(body)
+
   if (!parsed.success) {
+    console.error('[sign-up] Validation failed:', parsed.error.issues)
     return NextResponse.json({ error: 'Invalid account details' }, { status: 400 })
   }
 
