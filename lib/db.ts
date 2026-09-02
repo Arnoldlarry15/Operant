@@ -30,18 +30,42 @@ async function refreshRdsIamTokenIfNeeded(): Promise<string> {
   const port = Number(process.env.PGPORT ?? 5432)
   const region = process.env.AWS_REGION || 'us-east-2'
 
+  let credentials: Awaited<ReturnType<ReturnType<typeof awsCredentialsProvider>>>
+
+  try {
+    const credentialsProvider = awsCredentialsProvider({
+      roleArn,
+      clientConfig: { region },
+    })
+
+    credentials = await credentialsProvider()
+  } catch (err) {
+    console.error('[db] OIDC-to-STS credential exchange failed:', err)
+    throw new Error(
+      `[db] OIDC-to-STS credential exchange failed: ${err instanceof Error ? err.message : String(err)
+      }`,
+    )
+  }
+
   const signer = new Signer({
     hostname: process.env.PGHOST!,
     port,
     username: process.env.PGUSER || 'postgres',
     region,
-    credentials: awsCredentialsProvider({
-      roleArn,
-      clientConfig: { region },
-    }),
+    credentials,
   })
 
-  const token = await signer.getAuthToken()
+  let token: string
+
+  try {
+    token = await signer.getAuthToken()
+  } catch (err) {
+    console.error('[db] RDS IAM token signing failed:', err)
+    throw new Error(
+      `[db] RDS IAM token signing failed: ${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
+
   g.__operantRdsToken = token
   g.__operantRdsTokenExpiresAt = Date.now() + 10 * 60 * 1000
   return token
