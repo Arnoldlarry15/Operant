@@ -250,33 +250,19 @@ export async function getCognitoUserFromAccessToken(accessToken: string): Promis
   }
 }
 
-function getCognitoUserFromIdToken(idToken: string): CognitoAppUser | null {
-  try {
-    const parts = idToken.split('.')
-    if (parts.length !== 3) return null
-    const decoded = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'))
-    const id = decoded.sub
-    const email = decoded.email ?? decoded['cognito:username'] ?? decoded.username
-    if (!id || !email) return null
-    const name = decoded.name ?? decoded.nickname ?? email.split('@')[0]
-    return {
-      id,
-      email,
-      name,
-      user_metadata: {
-        display_name: name,
-        name,
-      },
-    }
-  } catch {
-    return null
-  }
-}
-
+// NOTE: there used to be a fallback here that decoded the id_token cookie's
+// JWT payload and trusted its `sub`/`email` claims directly, with no
+// signature verification. Since that cookie is just a string the client
+// controls, that path let anyone authenticate as any user by handing it a
+// hand-crafted (fake) id token. Removed. Every path below resolves identity
+// through Cognito's GetUser API, which cryptographically validates the
+// access token server-side. If that fails, the caller is unauthenticated,
+// full stop. (If a fully offline-verified path is wanted later for
+// latency/cost reasons, use a JWKS-based verifier such as aws-jwt-verify
+// rather than a raw base64 decode.)
 export async function getCognitoUserFromCookies(): Promise<CognitoAppUser | null> {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get(authCookieNames.access)?.value
-  const idToken = cookieStore.get(authCookieNames.id)?.value
 
   if (accessToken) {
     const user = await getCognitoUserFromAccessToken(accessToken)
@@ -291,11 +277,6 @@ export async function getCognitoUserFromCookies(): Promise<CognitoAppUser | null
     }
   } catch (err) {
     console.error('[getCognitoUserFromCookies] Refresh session fallback error:', err)
-  }
-
-  if (idToken) {
-    const userFromId = getCognitoUserFromIdToken(idToken)
-    if (userFromId) return userFromId
   }
 
   return null

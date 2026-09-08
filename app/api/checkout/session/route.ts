@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: Request) {
   try {
-    console.log('[POST /api/checkout/session] Cookie header:', req.headers.get('cookie'))
     const body = await req.json().catch(() => null)
     const result = await startCheckoutSession(body)
     return NextResponse.json(result)
