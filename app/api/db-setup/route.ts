@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 const allowedMigrationFiles = new Set([
   '001-setup-schema.sql',
   '003-full-aurora-schema.sql',
+  '004-create-app-role.sql',
 ])
 
 function json(body: unknown, init?: ResponseInit) {
