@@ -19,17 +19,28 @@ export async function getSecretValue(secretId: string): Promise<string> {
   const cached = cache.get(secretId)
   if (cached) return cached
 
-  const result = await getSecretsClient().send(
-    new GetSecretValueCommand({ SecretId: secretId }),
-  )
+  try {
+    const result = await getSecretsClient().send(
+      new GetSecretValueCommand({ SecretId: secretId }),
+    )
 
-  const value = result.SecretString ?? (
-    result.SecretBinary ? Buffer.from(result.SecretBinary).toString('utf8') : null
-  )
+    const value = result.SecretString ?? (
+      result.SecretBinary ? Buffer.from(result.SecretBinary).toString('utf8') : null
+    )
 
-  if (!value) throw new Error(`Secret ${secretId} has no readable value`)
-  cache.set(secretId, value)
-  return value
+    if (!value) throw new Error(`Secret ${secretId} has no readable value`)
+    cache.set(secretId, value)
+    return value
+  } catch (err: unknown) {
+    const awsError = err as (Error & { name?: string }) | undefined
+    if (awsError?.name === 'ResourceNotFoundException') {
+      throw new Error(`Secret '${secretId}' not found in Secrets Manager.`)
+    }
+    if (awsError?.name === 'AccessDeniedException') {
+      throw new Error(`Access denied to secret '${secretId}' in Secrets Manager. Check IAM permissions.`)
+    }
+    throw err
+  }
 }
 
 export async function getJsonSecret<T extends Record<string, unknown>>(secretId: string): Promise<T> {

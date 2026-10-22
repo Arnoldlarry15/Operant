@@ -146,20 +146,12 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
       try {
         user = await ensureUser(userEmailArg, userEmailArg.split('@')[0])
       } catch (err) {
-        console.warn('[startCheckoutSession] ensureUser for userEmailArg warning:', err)
-      }
-    }
-
-    if (!user) {
-      try {
-        user = await ensureUser('guest-checkout@operant.local', 'Guest Customer')
-      } catch (err) {
-        throw new Error(`Failed to resolve Aurora user for checkout session: ${err instanceof Error ? err.message : String(err)}`)
+        throw new Error(`Failed to resolve Aurora user for checkout: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
     if (!user || !user.id) {
-      throw new Error('Failed to resolve Aurora user for checkout session (user record missing ID)')
+      throw new Error('Not authenticated: You must be signed in or provide a valid email to start checkout.')
     }
 
     const stripe = getStripe()

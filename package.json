@@ -12,6 +12,7 @@
     "test:checkout": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-checkout-sandbox.mjs",
     "test:stripe": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-checkout-sandbox.mjs",
     "test:webhook": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-webhook-unit.mjs",
+    "test:auth": "node --experimental-loader ./scripts/loader.mjs --conditions=react-server scripts/test-auth-signup.mjs",
     "verify:production": "node scripts/verify-production-invariants.mjs"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
-﻿import 'server-only'
+import 'server-only'
 
 import { awsCredentialsProvider } from '@vercel/functions/oidc'
+import { defaultProvider } from '@aws-sdk/credential-provider-node'
 
 export function getAwsRegion(): string {
   const region = process.env.AWS_REGION
@@ -24,6 +25,19 @@ export function getAwsCredentials() {
 
   const roleArn = process.env.AWS_ROLE_ARN
 
+  if (process.env.VERCEL && roleArn) {
+    return awsCredentialsProvider({
+      roleArn,
+      clientConfig: {
+        region: getAwsRegion(),
+      },
+    })
+  }
+
+  if (!process.env.VERCEL) {
+    return defaultProvider()
+  }
+
   if (!roleArn) {
     throw new Error(
       'AWS credentials are not configured: set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY or AWS_ROLE_ARN for Vercel OIDC',
@@ -37,5 +51,3 @@ export function getAwsCredentials() {
     },
   })
 }
-
-

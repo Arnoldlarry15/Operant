@@ -20,8 +20,31 @@ export function getAgentAssetsBucket(): string {
   return bucket
 }
 
+function getExpectedBucketOwner(): string | undefined {
+  return process.env.AWS_ACCOUNT_ID || undefined
+}
+
 export async function assertAgentAssetsBucketReachable(): Promise<void> {
-  await getS3Client().send(new HeadBucketCommand({ Bucket: getAgentAssetsBucket() }))
+  const bucket = getAgentAssetsBucket()
+  try {
+    await getS3Client().send(
+      new HeadBucketCommand({
+        Bucket: bucket,
+        ExpectedBucketOwner: getExpectedBucketOwner(),
+      }),
+    )
+  } catch (err: unknown) {
+    const awsError = err as (Error & { $metadata?: { httpStatusCode?: number } }) | undefined
+    const statusCode = awsError?.$metadata?.httpStatusCode
+    const name = awsError?.name ?? 'UnknownError'
+    if (statusCode === 404 || name === 'NotFound') {
+      throw new Error(`S3 bucket '${bucket}' does not exist (HTTP 404).`)
+    }
+    if (statusCode === 403 || name === 'Forbidden') {
+      throw new Error(`Access denied to S3 bucket '${bucket}' (HTTP 403). Check IAM permissions or AWS account ownership.`)
+    }
+    throw new Error(`S3 bucket '${bucket}' unreachable (${name}): ${awsError?.message ?? String(err)}`)
+  }
 }
 
 export async function createAgentAssetUploadUrl(input: {
@@ -44,6 +67,7 @@ export async function createAgentAssetUploadUrl(input: {
     Bucket: getAgentAssetsBucket(),
     Key: key,
     ContentType: input.contentType,
+    ExpectedBucketOwner: getExpectedBucketOwner(),
   })
 
   return {
@@ -57,10 +81,20 @@ export async function createAgentAssetDownloadUrl(
   key: string,
   expiresInSeconds = 300,
 ): Promise<string> {
-  const command = new GetObjectCommand({ Bucket: getAgentAssetsBucket(), Key: key })
+  const command = new GetObjectCommand({
+    Bucket: getAgentAssetsBucket(),
+    Key: key,
+    ExpectedBucketOwner: getExpectedBucketOwner(),
+  })
   return getSignedUrl(getS3Client(), command, { expiresIn: expiresInSeconds })
 }
 
 export async function deleteAgentAsset(key: string): Promise<void> {
-  await getS3Client().send(new DeleteObjectCommand({ Bucket: getAgentAssetsBucket(), Key: key }))
+  await getS3Client().send(
+    new DeleteObjectCommand({
+      Bucket: getAgentAssetsBucket(),
+      Key: key,
+      ExpectedBucketOwner: getExpectedBucketOwner(),
+    }),
+  )
 }

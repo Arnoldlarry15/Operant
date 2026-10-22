@@ -42,25 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     setLoading(true)
-    const savedEmail = typeof window !== 'undefined' ? localStorage.getItem('operant_user_email') : null
     try {
       const response = await fetch('/api/auth/me', { cache: 'no-store' })
       if (!response.ok) {
-        if (savedEmail) {
-          const fallbackUser: AuthUser = {
-            id: `user-${savedEmail}`,
-            email: savedEmail,
-            name: savedEmail.split('@')[0],
-            user_metadata: { display_name: savedEmail.split('@')[0], name: savedEmail.split('@')[0] },
-          }
-          setUser(fallbackUser)
-          setSession({ provider: 'cognito' })
-          setProfile({ id: fallbackUser.id, display_name: fallbackUser.name })
-        } else {
-          setUser(null)
-          setSession(null)
-          setProfile(null)
-        }
+        setUser(null)
+        setSession(null)
+        setProfile(null)
         return
       }
 
@@ -72,35 +59,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined' && data.user.email) {
           localStorage.setItem('operant_user_email', data.user.email)
         }
-      } else if (savedEmail) {
-        const fallbackUser: AuthUser = {
-          id: `user-${savedEmail}`,
-          email: savedEmail,
-          name: savedEmail.split('@')[0],
-          user_metadata: { display_name: savedEmail.split('@')[0], name: savedEmail.split('@')[0] },
-        }
-        setUser(fallbackUser)
-        setSession({ provider: 'cognito' })
-        setProfile({ id: fallbackUser.id, display_name: fallbackUser.name })
+      } else {
+        setUser(null)
+        setSession(null)
+        setProfile(null)
       }
+    } catch {
+      setUser(null)
+      setSession(null)
+      setProfile(null)
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedEmail = localStorage.getItem('operant_user_email')
-      if (savedEmail) {
-        setUser({
-          id: `user-${savedEmail}`,
-          email: savedEmail,
-          name: savedEmail.split('@')[0],
-          user_metadata: { display_name: savedEmail.split('@')[0], name: savedEmail.split('@')[0] },
-        })
-        setSession({ provider: 'cognito' })
-      }
-    }
     refreshProfile()
   }, [refreshProfile])
 

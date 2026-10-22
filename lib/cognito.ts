@@ -191,7 +191,13 @@ function extractUsernameFromToken(token?: string | null): string | null {
 }
 
 export async function refreshCognitoSession(): Promise<AuthenticationResultType | null> {
-  const cookieStore = await cookies()
+  let cookieStore
+  try {
+    cookieStore = await cookies()
+  } catch {
+    return null
+  }
+
   const refreshToken = cookieStore.get(authCookieNames.refresh)?.value
   const idToken = cookieStore.get(authCookieNames.id)?.value
   const accessToken = cookieStore.get(authCookieNames.access)?.value
@@ -261,7 +267,13 @@ export async function getCognitoUserFromAccessToken(accessToken: string): Promis
 // latency/cost reasons, use a JWKS-based verifier such as aws-jwt-verify
 // rather than a raw base64 decode.)
 export async function getCognitoUserFromCookies(): Promise<CognitoAppUser | null> {
-  const cookieStore = await cookies()
+  let cookieStore
+  try {
+    cookieStore = await cookies()
+  } catch {
+    return null
+  }
+
   const accessToken = cookieStore.get(authCookieNames.access)?.value
 
   if (accessToken) {

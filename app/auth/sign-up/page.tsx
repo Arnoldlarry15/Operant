@@ -20,10 +20,17 @@ export default function SignUpPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault()
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
+
+    const hasUpperCase = /[A-Z]/.test(password)
+    const hasLowerCase = /[a-z]/.test(password)
+    const hasNumber = /[0-9]/.test(password)
+    const hasSymbol = /[^A-Za-z0-9]/.test(password)
+
+    if (password.length < 8 || !hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+      setError('Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.')
       return
     }
+
     setLoading(true)
     setError(null)
 
@@ -98,12 +105,15 @@ export default function SignUpPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="At least 8 characters"
+                  placeholder="At least 8 chars with uppercase, number & symbol"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="new-password"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.
+                </p>
               </div>
 
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-4 py-3 flex items-start gap-3">

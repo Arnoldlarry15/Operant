@@ -33,11 +33,8 @@ export async function GET() {
       display_name: dbUser.name,
     }
   } catch (err) {
-    console.error('[auth/me] ensureUser fallback (database error):', err)
-    profile = {
-      id: user.id,
-      display_name: user.name ?? user.email.split('@')[0],
-    }
+    console.error('[auth/me] Aurora profile resolution failed:', err)
+    profile = null
   }
 
   const response = NextResponse.json({
