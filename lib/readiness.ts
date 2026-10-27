@@ -7,6 +7,7 @@ type ReadinessCheck = {
   name: string
   ok: boolean
   detail?: string
+  optional?: boolean
 }
 
 export type ReadinessReport = {
@@ -14,12 +15,18 @@ export type ReadinessReport = {
   checks: ReadinessCheck[]
 }
 
+export type OperationalProbes = {
+  query?: (text: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount: number }>
+  assertBucketReachable?: () => Promise<void>
+  getSecret?: (secretId: string) => Promise<string>
+}
+
 function hasEnv(name: string): boolean {
   return Boolean(process.env[name]?.trim())
 }
 
-function check(name: string, ok: boolean, detail?: string): ReadinessCheck {
-  return { name, ok, detail }
+function check(name: string, ok: boolean, detail?: string, optional?: boolean): ReadinessCheck {
+  return { name, ok, detail, ...(optional ? { optional: true } : {}) }
 }
 
 export function getConfigurationReadiness(): ReadinessReport {
@@ -43,7 +50,7 @@ export function getConfigurationReadiness(): ReadinessReport {
     check('aurora_ssl_mode', hasEnv('PGSSLMODE'), 'Set to verify-full in production to verify the Aurora TLS certificate.'),
     check('aurora_aws_region', hasEnv('AWS_REGION'), 'Required for IAM database auth.'),
     check('aurora_aws_role', hasEnv('AWS_ROLE_ARN'), 'Required for Vercel OIDC to assume the RDS auth role.'),
-    check('secrets_manager_config_secret', hasEnv('AWS_SECRETS_MANAGER_CONFIG_SECRET_ID'), 'Required for AWS Secrets Manager configuration access.'),
+    check('secrets_manager_config_secret', hasEnv('AWS_SECRETS_MANAGER_CONFIG_SECRET_ID'), 'Optional AWS Secrets Manager configuration access.', true),
     check('s3_agent_assets_bucket', hasEnv('AGENT_ASSETS_BUCKET'), 'Required for agent files, images, and assets in S3.'),
     check('posthog_key', hasEnv('NEXT_PUBLIC_POSTHOG_KEY'), 'Required for PostHog analytics, feature flags, errors, and telemetry.'),
     check('posthog_host', hasEnv('NEXT_PUBLIC_POSTHOG_HOST'), 'Required for PostHog ingestion.'),
@@ -54,12 +61,15 @@ export function getConfigurationReadiness(): ReadinessReport {
     check('setup_token', hasEnv('SETUP_TOKEN'), 'Required to protect the Aurora setup endpoint.'),
   ]
 
-  return { ok: checks.every((item) => item.ok), checks }
+  return { ok: checks.every((item) => item.optional || item.ok), checks }
 }
 
-export async function getOperationalReadiness(): Promise<ReadinessReport> {
+export async function getOperationalReadiness(probes?: OperationalProbes): Promise<ReadinessReport> {
   const configuration = getConfigurationReadiness()
   const checks = [...configuration.checks]
+  const runQuery = probes?.query ?? query
+  const runAssertBucket = probes?.assertBucketReachable ?? assertAgentAssetsBucketReachable
+  const runGetSecret = probes?.getSecret ?? getSecretValue
 
   if (
     hasEnv('PGHOST') &&
@@ -70,7 +80,7 @@ export async function getOperationalReadiness(): Promise<ReadinessReport> {
     hasEnv('AWS_ROLE_ARN')
   ) {
     try {
-      await query('SELECT 1')
+      await runQuery('SELECT 1')
       checks.push(check('aurora_connection', true, 'Aurora accepted a lightweight SELECT 1 query.'))
     } catch (err) {
       checks.push(check('aurora_connection', false, err instanceof Error ? err.message : String(err)))
@@ -81,7 +91,7 @@ export async function getOperationalReadiness(): Promise<ReadinessReport> {
 
   if (hasEnv('AGENT_ASSETS_BUCKET') && hasEnv('AWS_REGION') && hasEnv('AWS_ROLE_ARN')) {
     try {
-      await assertAgentAssetsBucketReachable()
+      await runAssertBucket()
       checks.push(check('s3_agent_assets_bucket_access', true, 'S3 accepted a HeadBucket check.'))
     } catch (err) {
       checks.push(check('s3_agent_assets_bucket_access', false, err instanceof Error ? err.message : String(err)))
@@ -91,15 +101,27 @@ export async function getOperationalReadiness(): Promise<ReadinessReport> {
   }
 
   if (hasEnv('AWS_SECRETS_MANAGER_CONFIG_SECRET_ID') && hasEnv('AWS_REGION') && hasEnv('AWS_ROLE_ARN')) {
+    const secretId = process.env.AWS_SECRETS_MANAGER_CONFIG_SECRET_ID!
     try {
-      await getSecretValue(process.env.AWS_SECRETS_MANAGER_CONFIG_SECRET_ID!)
-      checks.push(check('secrets_manager_config_secret_access', true, 'Secrets Manager returned the configured secret.'))
+      await runGetSecret(secretId)
+      checks.push(check('secrets_manager_config_secret_access', true, 'Secrets Manager returned the configured secret.', true))
     } catch (err) {
-      checks.push(check('secrets_manager_config_secret_access', false, err instanceof Error ? err.message : String(err)))
+      const message = err instanceof Error ? err.message : String(err)
+      const isNotFound = message.includes('not found') || message.includes('ResourceNotFoundException')
+      checks.push(
+        check(
+          'secrets_manager_config_secret_access',
+          false,
+          isNotFound
+            ? `Optional secret '${secretId}' not found in Secrets Manager (non-blocking).`
+            : `Optional Secrets Manager probe failed: ${message}`,
+          true,
+        ),
+      )
     }
   } else {
-    checks.push(check('secrets_manager_config_secret_access', false, 'Skipped because Secrets Manager environment variables are incomplete.'))
+    checks.push(check('secrets_manager_config_secret_access', false, 'Optional Secrets Manager check skipped (unconfigured).', true))
   }
 
-  return { ok: checks.every((item) => item.ok), checks }
+  return { ok: checks.every((item) => item.optional || item.ok), checks }
 }
