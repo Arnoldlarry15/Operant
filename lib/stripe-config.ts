@@ -12,7 +12,9 @@ export type StripeConfig = {
 export function getStripeConfig(envOverride?: Record<string, string | undefined>): StripeConfig {
   const env = envOverride ?? process.env
   const rawMode = env.STRIPE_MODE?.trim()
-  const isProduction = env.NODE_ENV === 'production'
+  const isProduction = env.VERCEL_ENV
+    ? env.VERCEL_ENV === 'production'
+    : env.NODE_ENV === 'production'
 
   let mode: StripeMode
   if (!rawMode) {
