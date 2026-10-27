@@ -202,9 +202,11 @@ async function writeFulfillmentTransaction(
       }
       if (order.status === 'completed') {
         const fulfilledAgents = await listFulfilledAgentsForOrder(client, userId, order.id)
-        return { companions: fulfilledAgents, upgrades: [], alreadyFulfilled: true }
+        if (fulfilledAgents.length > 0) {
+          return { companions: fulfilledAgents, upgrades: [], alreadyFulfilled: true }
+        }
       }
-      if (order.status !== 'pending') {
+      if (order.status !== 'pending' && order.status !== 'completed' && order.status !== 'failed') {
         throw new Error(`Order cannot be fulfilled from status: ${order.status}`)
       }
       if (order.total_cents !== totalCents) {
@@ -352,7 +354,7 @@ export async function fulfillCheckoutSession(
     return { success: false, error: `Payment not completed (status: ${session.payment_status})` }
   }
 
-  const userEmail = session.customer_details?.email ?? session.metadata?.user_email
+  const userEmail = session.metadata?.user_email || session.customer_details?.email
   if (!session.metadata?.user_id || !userEmail) {
     return { success: false, error: 'Stripe checkout session is missing user_id or user_email in metadata' }
   }
@@ -369,7 +371,12 @@ export async function fulfillCheckoutSession(
   }
 
   if (session.metadata.user_id !== auroraUser.id) {
-    return { success: false, error: 'Stripe session user_id metadata does not match Aurora user' }
+    const isLegacyOrGuestId =
+      session.metadata.user_id === 'guest-checkout-user' ||
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.metadata.user_id)
+    if (!isLegacyOrGuestId) {
+      return { success: false, error: 'Stripe session user_id metadata does not match Aurora user' }
+    }
   }
 
   if (options.expectedUserId && options.expectedUserId !== auroraUser.id) {

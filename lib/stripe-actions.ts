@@ -148,6 +148,12 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
       } catch (err) {
         throw new Error(`Failed to resolve Aurora user for checkout: ${err instanceof Error ? err.message : String(err)}`)
       }
+    } else if (!user) {
+      try {
+        user = await ensureUser('guest-checkout@operant.local', 'Guest Customer')
+      } catch (err) {
+        console.warn('[startCheckoutSession] Guest customer resolution failed:', err)
+      }
     }
 
     if (!user || !user.id) {
@@ -188,7 +194,41 @@ export async function startCheckoutSession(input: unknown): Promise<CheckoutSess
     })
     const totalCents = orderItems.reduce((sum, item) => sum + Math.round(item.price * 100), 0)
 
-    const cartMetadata = JSON.stringify(orderItems).slice(0, 500)
+    const compactItems = orderItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      type: item.type,
+      companionMeta: item.companionMeta ? {
+        companion_type: item.companionMeta.companion_type,
+        personality_id: item.companionMeta.personality_id,
+        core_id: item.companionMeta.core_id,
+        appearance_id: item.companionMeta.appearance_id,
+        prebuilt_id: item.companionMeta.prebuilt_id,
+        skill_ids: item.companionMeta.skill_ids,
+        color: item.companionMeta.color,
+        emoji: item.companionMeta.emoji ?? 'AI',
+        trait: item.companionMeta.trait,
+      } : undefined,
+    }))
+    let cartMetadata = JSON.stringify(compactItems)
+    if (cartMetadata.length > 500) {
+      const minimal = orderItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        type: item.type,
+        companionMeta: item.companionMeta ? {
+          companion_type: item.companionMeta.companion_type,
+          prebuilt_id: item.companionMeta.prebuilt_id,
+          emoji: item.companionMeta.emoji ?? 'AI',
+        } : undefined,
+      }))
+      cartMetadata = JSON.stringify(minimal)
+      if (cartMetadata.length > 500) {
+        cartMetadata = '[]'
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       ui_mode: 'embedded_page',

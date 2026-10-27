@@ -1,6 +1,7 @@
 import 'server-only'
 import { Pool, type PoolClient } from 'pg'
 import { Signer } from '@aws-sdk/rds-signer'
+import { attachDatabasePool } from '@vercel/functions'
 import { awsCredentialsProvider } from '@vercel/functions/oidc'
 
 const g = globalThis as unknown as {
@@ -76,7 +77,7 @@ async function getPool(): Promise<Pool> {
 
   if (hasPgPassword) {
     if (!g.__operantPool) {
-      const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
+      // Pool attached via static import
       const port = Number(process.env.PGPORT ?? 5432)
       const sslMode = (process.env.PGSSLMODE ?? 'verify-full').toLowerCase()
       const ssl = sslMode === 'disable' ? false : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }
@@ -104,7 +105,7 @@ async function getPool(): Promise<Pool> {
     await refreshRdsIamTokenIfNeeded()
 
     if (!g.__operantPool) {
-      const { attachDatabasePool } = require('@vercel/functions') as typeof import('@vercel/functions')
+      // Pool attached via static import
       const port = Number(process.env.PGPORT ?? 5432)
       const sslMode = (process.env.PGSSLMODE ?? 'verify-full').toLowerCase()
       const ssl = sslMode === 'disable' ? false : { rejectUnauthorized: sslMode !== 'require' && sslMode !== 'no-verify' }

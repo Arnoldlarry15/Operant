@@ -105,7 +105,7 @@ export async function getConversation(
        AND conversations.user_id = $2
        AND companions.user_id = $2
        AND companions.companion_type IN ('prebuilt', 'custom')
-     ORDER BY created_at ASC
+     ORDER BY conversations.created_at ASC
      LIMIT $3`,
     [companionId, userId, limit],
   )
@@ -166,14 +166,14 @@ export async function getCompanionSkills(
   companionId: string,
 ): Promise<{ skill_id: string; skill_name: string; created_at: string }[]> {
   const { rows } = await query<{ skill_id: string; skill_name: string; created_at: string }>(
-    `SELECT skill_id, skill_name, created_at
+    `SELECT companion_skills.skill_id, companion_skills.skill_name, companion_skills.created_at
      FROM companion_skills
      INNER JOIN companions ON companions.id = companion_skills.companion_id
      WHERE companion_skills.companion_id = $1
        AND companion_skills.user_id = $2
        AND companions.user_id = $2
        AND companions.companion_type IN ('prebuilt', 'custom')
-     ORDER BY created_at ASC`,
+     ORDER BY companion_skills.created_at ASC`,
     [companionId, userId],
   )
   return rows
