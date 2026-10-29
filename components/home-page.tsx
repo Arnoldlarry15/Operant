@@ -1,15 +1,51 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { Bot, Zap, Star, ShoppingBag, ArrowRight, Sparkles, Shield, TrendingUp, Users, ChevronRight } from 'lucide-react'
 import { useAppState } from '@/lib/app-state'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { prebuiltAIs } from '@/lib/store-data'
+import { prebuiltAIs, skills } from '@/lib/store-data'
 import Image from 'next/image'
 import { OperantLogo } from '@/components/operant-logo'
 
 export function HomePage() {
   const { setPage } = useAppState()
+
+  const [statsData, setStatsData] = useState<{
+    agentsBuilt: string
+    skillsAvailable: string
+    users: string
+    avgRating: string
+  }>({
+    agentsBuilt: '0',
+    skillsAvailable: String(skills.length),
+    users: '0',
+    avgRating: '--',
+  })
+
+  useEffect(() => {
+    let isMounted = true
+    fetch('/api/stats')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && isMounted) {
+          setStatsData({
+            agentsBuilt: typeof data.agentsBuilt === 'number' ? String(data.agentsBuilt) : '0',
+            skillsAvailable: typeof data.skillsAvailable === 'number' ? String(data.skillsAvailable) : String(skills.length),
+            users: typeof data.users === 'number' ? String(data.users) : '0',
+            avgRating: data.avgRating ? String(data.avgRating) : '--',
+          })
+        }
+      })
+      .catch(() => {
+        // Keep honest default state on network or server error
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const features = [
     {
@@ -47,10 +83,10 @@ export function HomePage() {
   ]
 
   const stats = [
-    { label: 'AI Agents Built', value: '0', icon: Bot },
-    { label: 'Skills Available', value: '12', icon: Zap },
-    { label: 'Happy Users', value: '0', icon: Users },
-    { label: 'Avg Rating', value: '--', icon: Star },
+    { label: 'AI Agents Built', value: statsData.agentsBuilt, icon: Bot },
+    { label: 'Skills Available', value: statsData.skillsAvailable, icon: Zap },
+    { label: 'Happy Users', value: statsData.users, icon: Users },
+    { label: 'Avg Rating', value: statsData.avgRating, icon: Star },
   ]
 
   return (
